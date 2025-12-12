@@ -1,17 +1,20 @@
 version: '3.8'
 
+# XFactor Bot - Automated Trading System
+# https://gitlab-master.nvidia.com/cvanthin/000_trading
+
 services:
-  trading-bot:
+  xfactor-bot:
     build:
       context: ..
       dockerfile: docker/Dockerfile
-    container_name: trading-bot
+    container_name: xfactor-bot
     ports:
-      - "8000:8000"
+      - "8765:8000"
     environment:
       - IBKR_HOST=host.docker.internal
       - IBKR_PORT=7497
-      - TIMESCALE_URL=postgresql://postgres:postgres@timescaledb:5432/trading_bot
+      - TIMESCALE_URL=postgresql://postgres:postgres@timescaledb:5432/xfactor_db
       - REDIS_URL=redis://redis:6379/0
     volumes:
       - ../logs:/app/logs
@@ -24,34 +27,34 @@ services:
 
   timescaledb:
     image: timescale/timescaledb:latest-pg15
-    container_name: timescaledb
+    container_name: xfactor-timescaledb
     ports:
       - "5433:5432"
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=trading_bot
+      - POSTGRES_DB=xfactor_db
     volumes:
-      - timescale_data:/var/lib/postgresql/data
+      - xfactor_timescale_data:/var/lib/postgresql/data
     restart: unless-stopped
 
   redis:
     image: redis:7-alpine
-    container_name: redis
+    container_name: xfactor-redis
     ports:
       - "6379:6379"
     volumes:
-      - redis_data:/data
+      - xfactor_redis_data:/data
     restart: unless-stopped
 
   prometheus:
     image: prom/prometheus:latest
-    container_name: prometheus
+    container_name: xfactor-prometheus
     ports:
       - "9090:9090"
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
-      - prometheus_data:/prometheus
+      - xfactor_prometheus_data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
@@ -59,14 +62,14 @@ services:
 
   grafana:
     image: grafana/grafana:latest
-    container_name: grafana
+    container_name: xfactor-grafana
     ports:
       - "3001:3000"
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
       - GF_USERS_ALLOW_SIGN_UP=false
     volumes:
-      - grafana_data:/var/lib/grafana
+      - xfactor_grafana_data:/var/lib/grafana
       - ./grafana/dashboards:/var/lib/grafana/dashboards
       - ./grafana/provisioning:/etc/grafana/provisioning
     depends_on:
@@ -74,8 +77,8 @@ services:
     restart: unless-stopped
 
 volumes:
-  timescale_data:
-  redis_data:
-  prometheus_data:
-  grafana_data:
+  xfactor_timescale_data:
+  xfactor_redis_data:
+  xfactor_prometheus_data:
+  xfactor_grafana_data:
 

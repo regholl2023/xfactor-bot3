@@ -1,4 +1,11 @@
+# XFactor Bot - Automated Trading System
+# https://gitlab-master.nvidia.com/cvanthin/000_trading
+
 FROM python:3.11-slim
+
+LABEL name="XFactor Bot"
+LABEL version="0.1.0"
+LABEL description="AI-Powered Automated Trading Bot"
 
 WORKDIR /app
 

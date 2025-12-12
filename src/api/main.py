@@ -1,5 +1,6 @@
 """
-FastAPI application for the Trading Bot Control Panel.
+FastAPI application for XFactor Bot Control Panel.
+XFactor Bot - AI-Powered Automated Trading System
 """
 
 from contextlib import asynccontextmanager
@@ -21,7 +22,7 @@ metrics = MetricsCollector()
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator:
     """Application lifespan manager."""
-    logger.info("Starting Trading Bot API...")
+    logger.info("🚀 Starting XFactor Bot API...")
     
     # Startup
     # TODO: Initialize connections here
@@ -29,7 +30,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
     yield
     
     # Shutdown
-    logger.info("Shutting down Trading Bot API...")
+    logger.info("👋 Shutting down XFactor Bot API...")
 
 
 def create_app() -> FastAPI:
@@ -37,8 +38,8 @@ def create_app() -> FastAPI:
     settings = get_settings()
     
     app = FastAPI(
-        title="Trading Bot API",
-        description="Control panel API for the IBKR Trading Bot",
+        title="XFactor Bot API",
+        description="AI-Powered Automated Trading System - Control Panel API",
         version="0.1.0",
         lifespan=lifespan,
     )
@@ -66,7 +67,7 @@ def create_app() -> FastAPI:
     
     @app.get("/")
     async def root():
-        return {"status": "ok", "name": "Trading Bot API", "version": "0.1.0"}
+        return {"status": "ok", "name": "XFactor Bot", "version": "0.1.0", "description": "AI-Powered Automated Trading System"}
     
     @app.get("/health")
     async def health():

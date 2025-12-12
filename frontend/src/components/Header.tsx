@@ -9,8 +9,9 @@ export function Header({ connected }: HeaderProps) {
     <header className="border-b border-border bg-card px-6 py-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <h1 className="text-xl font-bold text-foreground">
-            Trading Bot Control Panel
+          <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
+            <span className="text-2xl">⚡</span>
+            XFactor Bot
           </h1>
           <span className="rounded-full bg-primary/20 px-3 py-1 text-sm text-primary">
             Paper Mode
