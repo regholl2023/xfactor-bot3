@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { Lock, Unlock, Power, AlertTriangle, Check, X, Eye, EyeOff } from 'lucide-react'
+import { Lock, Unlock, Power, AlertTriangle, Check, X, Eye, EyeOff, Bot } from 'lucide-react'
+import { BotManager } from './BotManager'
 
 interface Feature {
   feature: string
@@ -20,6 +21,7 @@ export function AdminPanel() {
   const [error, setError] = useState('')
   const [features, setFeatures] = useState<GroupedFeatures>({})
   const [loading, setLoading] = useState(false)
+  const [activeTab, setActiveTab] = useState<'features' | 'bots'>('features')
 
   const login = async () => {
     setError('')
@@ -210,6 +212,39 @@ export function AdminPanel() {
         </button>
       </div>
       
+      {/* Tab Selector */}
+      <div className="flex gap-2 mb-4">
+        <button
+          onClick={() => setActiveTab('features')}
+          className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
+            activeTab === 'features'
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-secondary text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          Features
+        </button>
+        <button
+          onClick={() => setActiveTab('bots')}
+          className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+            activeTab === 'bots'
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-secondary text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          <Bot className="h-4 w-4" />
+          Bots
+        </button>
+      </div>
+      
+      {/* Bot Manager Tab */}
+      {activeTab === 'bots' && (
+        <BotManager token={token} />
+      )}
+      
+      {/* Features Tab */}
+      {activeTab === 'features' && (
+        <>
       {/* Emergency Controls */}
       <div className="mb-6 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
         <div className="flex items-center gap-2 mb-2">
@@ -280,6 +315,8 @@ export function AdminPanel() {
           </div>
         ))}
       </div>
+        </>
+      )}
     </div>
   )
 }

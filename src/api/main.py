@@ -53,7 +53,7 @@ def create_app() -> FastAPI:
     )
     
     # Include routers
-    from src.api.routes import config, positions, orders, risk, news, admin
+    from src.api.routes import config, positions, orders, risk, news, admin, bots
     
     app.include_router(config.router, prefix="/api/config", tags=["Config"])
     app.include_router(positions.router, prefix="/api/positions", tags=["Positions"])
@@ -61,6 +61,7 @@ def create_app() -> FastAPI:
     app.include_router(risk.router, prefix="/api/risk", tags=["Risk"])
     app.include_router(news.router, prefix="/api/news", tags=["News"])
     app.include_router(admin.router, prefix="/api/admin", tags=["Admin"])
+    app.include_router(bots.router, prefix="/api/bots", tags=["Bots"])
     
     @app.get("/")
     async def root():
