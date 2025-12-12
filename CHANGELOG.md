@@ -5,6 +5,73 @@ All notable changes to the XFactor Bot project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2024-12-12
+
+### Added
+- **Paper Trading Support**: Full integration with broker paper trading accounts
+  - IBKR paper trading with $1,000,000 simulated cash (port 7497)
+  - Alpaca paper trading with $100,000 simulated cash
+  - Auto port switching between paper (7497) and live (7496) modes
+  - Visual indicators showing paper trading status and simulated balance
+
+- **Trading Mode System**: Switch between Demo, Paper, and Live modes
+  - `TradingModeContext` for global mode state management
+  - `TradingModeSelector` component in header with mode switching
+  - Safety confirmation dialog before enabling Live mode
+  - Mode persistence across sessions (except Live for safety)
+
+- **Broker Configuration Panel**: New Admin Panel tab for broker management
+  - IBKR and Alpaca broker connection support
+  - Connection status display with account details
+  - Buying power and portfolio value display
+  - Paper trading info with simulated cash amounts
+
+- **Authentication Modals**: User notifications for protected actions
+  - Auth required modal for Pause/Kill Switch buttons in header
+  - Auth required modal for bot start/stop/pause controls
+  - Clear instructions on how to unlock admin access
+
+- **Crypto Trading Dashboard**: New `CryptoPanel` component
+  - Live crypto prices from CoinGecko API
+  - Fear & Greed Index display
+  - Whale alert tracking
+  - Crypto bot management
+
+- **Commodity Trading Dashboard**: New `CommodityPanel` component
+  - Gold, silver, oil, gas, and other commodity tracking
+  - ETF and futures support
+  - Seasonal trading indicators
+
+- **Fee Tracking System**: New `FeeTracker` component
+  - Broker-specific fee structures (IBKR, Alpaca, Schwab, Tradier)
+  - Fee breakdown by type (commission, spread, exchange, regulatory)
+  - Fee estimator for trade planning
+  - `/api/fees/*` endpoints for fee data
+
+- **Increased Bot Capacity**: MAX_BOTS increased from 40 to 100
+  - Updated in `bot_instance.py`, `bot_manager.py`, and frontend
+
+### Changed
+- Header trading controls now check authentication before executing
+- Pause button toggles between Pause/Resume states
+- Kill Switch requires confirmation dialog
+- Portfolio summary fetches real data instead of mock data
+- Positions table shows empty state when no broker connected
+- Equity chart shows empty state when no data available
+- Docker compose folder renamed from `docker/` to `xfactor-bot/`
+- Docker compose port changed to 9876
+
+### Fixed
+- React hooks error (#300) in EquityChart component
+- CORS configuration for foresight.nvidia.com:9876
+- Null reference errors in CryptoPanel numeric displays
+- WebSocket connection stability improvements
+
+### Removed
+- Mock data from PositionsTable (shows real or empty data)
+- Mock data from Dashboard portfolio summary
+- Simulated equity data from EquityChart
+
 ## [0.6.0] - 2024-12-11
 
 ### Added
