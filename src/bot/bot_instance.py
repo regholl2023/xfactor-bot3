@@ -24,11 +24,22 @@ class BotStatus(str, Enum):
     ERROR = "error"
 
 
+class InstrumentType(str, Enum):
+    """Types of tradeable instruments."""
+    STOCK = "stock"
+    OPTIONS = "options"
+    FUTURES = "futures"
+    CRYPTO = "crypto"
+
+
 @dataclass
 class BotConfig:
     """Configuration for a bot instance."""
     name: str
     description: str = ""
+    
+    # Instrument type
+    instrument_type: InstrumentType = InstrumentType.STOCK
     
     # Trading configuration
     symbols: list[str] = field(default_factory=list)
@@ -55,10 +66,40 @@ class BotConfig:
     enable_news_trading: bool = True
     news_sentiment_threshold: float = 0.5
     
+    # =========================================================================
+    # Options-specific settings
+    # =========================================================================
+    options_type: str = "call"  # "call", "put", "both"
+    options_dte_min: int = 7    # Minimum days to expiration
+    options_dte_max: int = 45   # Maximum days to expiration
+    options_delta_min: float = 0.20  # Minimum delta (OTM)
+    options_delta_max: float = 0.50  # Maximum delta (ATM)
+    options_max_contracts: int = 10  # Max contracts per position
+    options_profit_target_pct: float = 50.0  # Take profit at 50% gain
+    options_stop_loss_pct: float = 30.0  # Stop loss at 30% loss
+    
+    # =========================================================================
+    # Futures-specific settings
+    # =========================================================================
+    futures_contracts: list[str] = field(default_factory=list)  # e.g., ["ES", "NQ", "CL"]
+    futures_max_contracts: int = 5
+    futures_use_micro: bool = True  # Use micro contracts for smaller size
+    futures_session: str = "rth"  # "rth" (regular) or "eth" (extended)
+    
+    # =========================================================================
+    # Aggressive trading settings
+    # =========================================================================
+    enable_scalping: bool = False  # Ultra short-term trades
+    scalp_profit_ticks: int = 10   # Take profit after X ticks
+    scalp_stop_ticks: int = 5      # Stop loss after X ticks
+    enable_momentum_bursts: bool = False  # Chase momentum moves
+    leverage_multiplier: float = 1.0  # Position size multiplier
+    
     def to_dict(self) -> dict:
         return {
             "name": self.name,
             "description": self.description,
+            "instrument_type": self.instrument_type.value if isinstance(self.instrument_type, InstrumentType) else self.instrument_type,
             "symbols": self.symbols,
             "strategies": self.strategies,
             "strategy_weights": self.strategy_weights,
@@ -69,10 +110,33 @@ class BotConfig:
             "use_paper_trading": self.use_paper_trading,
             "enable_news_trading": self.enable_news_trading,
             "news_sentiment_threshold": self.news_sentiment_threshold,
+            # Options
+            "options_type": self.options_type,
+            "options_dte_min": self.options_dte_min,
+            "options_dte_max": self.options_dte_max,
+            "options_delta_min": self.options_delta_min,
+            "options_delta_max": self.options_delta_max,
+            "options_max_contracts": self.options_max_contracts,
+            "options_profit_target_pct": self.options_profit_target_pct,
+            "options_stop_loss_pct": self.options_stop_loss_pct,
+            # Futures
+            "futures_contracts": self.futures_contracts,
+            "futures_max_contracts": self.futures_max_contracts,
+            "futures_use_micro": self.futures_use_micro,
+            "futures_session": self.futures_session,
+            # Aggressive
+            "enable_scalping": self.enable_scalping,
+            "scalp_profit_ticks": self.scalp_profit_ticks,
+            "scalp_stop_ticks": self.scalp_stop_ticks,
+            "enable_momentum_bursts": self.enable_momentum_bursts,
+            "leverage_multiplier": self.leverage_multiplier,
         }
     
     @classmethod
     def from_dict(cls, data: dict) -> "BotConfig":
+        # Handle instrument_type conversion
+        if "instrument_type" in data and isinstance(data["instrument_type"], str):
+            data["instrument_type"] = InstrumentType(data["instrument_type"])
         return cls(**data)
 
 

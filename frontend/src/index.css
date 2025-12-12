@@ -9,26 +9,54 @@
 body {
   margin: 0;
   padding: 0;
-  background-color: hsl(222, 47%, 11%);
-  color: hsl(210, 40%, 98%);
+  background-color: hsl(200, 25%, 18%);
+  color: hsl(38, 30%, 85%);
   font-family: 'JetBrains Mono', monospace;
 }
 
+/* XFactor Bot custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: hsl(222, 47%, 14%);
+  background: hsl(200, 25%, 22%);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: hsl(217, 33%, 30%);
+  background: hsl(200, 20%, 35%);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(217, 33%, 40%);
+  background: hsl(185, 45%, 45%);
 }
 
+/* XFactor brand text gradient */
+.xfactor-title {
+  background: linear-gradient(135deg, hsl(38, 35%, 70%) 0%, hsl(38, 35%, 80%) 50%, hsl(185, 45%, 50%) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Collapsible panel nested content styling */
+.collapsible-content > div > div:first-child {
+  border: none !important;
+  background: transparent !important;
+}
+
+.collapsible-content > div > div > h2:first-child,
+.collapsible-content > div > div > h3:first-child {
+  display: none !important;
+}
+
+/* Glow effects for key elements */
+.xfactor-glow {
+  box-shadow: 0 0 20px hsla(185, 45%, 45%, 0.3);
+}
+
+.money-glow {
+  box-shadow: 0 0 15px hsla(95, 35%, 45%, 0.4);
+}

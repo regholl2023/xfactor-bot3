@@ -37,7 +37,7 @@ export function AIAssistant() {
 
   const fetchInsights = async () => {
     try {
-      const res = await fetch('http://localhost:8765/api/ai/insights')
+      const res = await fetch('/api/ai/insights')
       if (res.ok) {
         const data = await res.json()
         setInsights(data.insights || [])
@@ -49,7 +49,7 @@ export function AIAssistant() {
 
   const fetchExamples = async () => {
     try {
-      const res = await fetch('http://localhost:8765/api/ai/examples')
+      const res = await fetch('/api/ai/examples')
       if (res.ok) {
         const data = await res.json()
         setExamples(data.examples || [])
@@ -75,7 +75,7 @@ export function AIAssistant() {
     setIsLoading(true)
 
     try {
-      const res = await fetch('http://localhost:8765/api/ai/chat', {
+      const res = await fetch('/api/ai/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -119,7 +119,7 @@ export function AIAssistant() {
 
   const clearChat = async () => {
     try {
-      await fetch(`http://localhost:8765/api/ai/clear/${sessionId}`, {
+      await fetch(`/api/ai/clear/${sessionId}`, {
         method: 'POST',
       })
       setMessages([])
@@ -301,4 +301,3 @@ export function AIAssistant() {
     </div>
   )
 }
-

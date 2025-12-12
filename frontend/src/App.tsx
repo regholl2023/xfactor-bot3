@@ -8,37 +8,64 @@ function App() {
   const [ws, setWs] = useState<WebSocket | null>(null)
 
   useEffect(() => {
-    // Connect to WebSocket
-    const websocket = new WebSocket('ws://localhost:8765/ws')
+    // Determine WebSocket URL based on current location
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    const wsUrl = `${protocol}//${window.location.host}/ws`
     
-    websocket.onopen = () => {
-      console.log('WebSocket connected')
-      setConnected(true)
-      // Subscribe to updates
-      websocket.send(JSON.stringify({ type: 'subscribe', channel: 'portfolio' }))
-      websocket.send(JSON.stringify({ type: 'subscribe', channel: 'orders' }))
-      websocket.send(JSON.stringify({ type: 'subscribe', channel: 'news' }))
+    let websocket: WebSocket | null = null
+    let reconnectTimeout: NodeJS.Timeout | null = null
+    
+    const connect = () => {
+      try {
+        websocket = new WebSocket(wsUrl)
+        
+        websocket.onopen = () => {
+          console.log('WebSocket connected')
+          setConnected(true)
+          // Subscribe to updates
+          websocket?.send(JSON.stringify({ type: 'subscribe', channel: 'portfolio' }))
+          websocket?.send(JSON.stringify({ type: 'subscribe', channel: 'orders' }))
+          websocket?.send(JSON.stringify({ type: 'subscribe', channel: 'news' }))
+        }
+        
+        websocket.onclose = () => {
+          console.log('WebSocket disconnected')
+          setConnected(false)
+          // Attempt reconnect after 5 seconds
+          reconnectTimeout = setTimeout(connect, 5000)
+        }
+        
+        websocket.onerror = (error) => {
+          console.error('WebSocket error:', error)
+        }
+        
+        websocket.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data)
+            console.log('WebSocket message:', data)
+            // Handle updates
+          } catch (e) {
+            console.error('Failed to parse WebSocket message:', e)
+          }
+        }
+        
+        setWs(websocket)
+      } catch (e) {
+        console.error('Failed to create WebSocket:', e)
+        // Attempt reconnect after 5 seconds
+        reconnectTimeout = setTimeout(connect, 5000)
+      }
     }
     
-    websocket.onclose = () => {
-      console.log('WebSocket disconnected')
-      setConnected(false)
-    }
-    
-    websocket.onerror = (error) => {
-      console.error('WebSocket error:', error)
-    }
-    
-    websocket.onmessage = (event) => {
-      const data = JSON.parse(event.data)
-      console.log('WebSocket message:', data)
-      // Handle updates
-    }
-    
-    setWs(websocket)
+    connect()
     
     return () => {
-      websocket.close()
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout)
+      }
+      if (websocket) {
+        websocket.close()
+      }
     }
   }, [])
 
@@ -54,4 +81,3 @@ function App() {
 }
 
 export default App
-

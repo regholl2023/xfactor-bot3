@@ -37,10 +37,10 @@ interface BotDetails {
 }
 
 interface BotManagerProps {
-  token: string
+  token?: string
 }
 
-export function BotManager({ token }: BotManagerProps) {
+export function BotManager({ token = '' }: BotManagerProps) {
   const [bots, setBots] = useState<BotSummary[]>([])
   const [selectedBot, setSelectedBot] = useState<BotDetails | null>(null)
   const [showCreateForm, setShowCreateForm] = useState(false)

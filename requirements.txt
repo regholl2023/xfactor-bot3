@@ -1,13 +1,15 @@
 # IBKR Connection
 ib_insync>=0.9.86
 
+# Alpaca Trading
+alpaca-py>=0.21.0
+
 # Data Processing
 pandas>=2.1.0
 numpy>=1.26.0
 polars>=0.20.0
 
 # Technical Analysis
-pandas-ta>=0.3.14b
 ta>=0.11.0
 
 # Database
@@ -40,7 +42,7 @@ langdetect>=1.0.9
 deep-translator>=1.11.4
 
 # Document Parsing
-PyMuPDF>=1.23.0
+pypdf>=4.0.0
 python-docx>=1.1.0
 openpyxl>=3.1.2
 
@@ -64,6 +66,12 @@ cachetools>=5.3.0
 
 # Social Media APIs
 praw>=7.7.1
+
+# Banking Integration
+plaid-python>=15.0.0
+
+# Market Data
+yfinance>=0.2.36
 
 # Development
 pytest>=7.4.0

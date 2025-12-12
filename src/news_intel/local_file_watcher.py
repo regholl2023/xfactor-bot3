@@ -75,18 +75,18 @@ class DocumentParser:
     async def _parse_pdf(self, file_path: Path) -> ParsedDocument:
         """Parse PDF document."""
         try:
-            import fitz  # PyMuPDF
+            from pypdf import PdfReader
             
             loop = asyncio.get_event_loop()
             
             def extract():
-                doc = fitz.open(file_path)
+                reader = PdfReader(file_path)
                 pages = []
-                for page in doc:
-                    pages.append(page.get_text())
-                page_count = len(doc)
-                doc.close()
-                return pages, page_count
+                for page in reader.pages:
+                    text = page.extract_text()
+                    if text:
+                        pages.append(text)
+                return pages, len(reader.pages)
             
             pages, page_count = await loop.run_in_executor(None, extract)
             content = "\n\n".join(pages)
@@ -100,7 +100,7 @@ class DocumentParser:
             )
             
         except ImportError:
-            logger.error("PyMuPDF not installed, cannot parse PDF")
+            logger.error("pypdf not installed, cannot parse PDF")
             raise
     
     async def _parse_docx(self, file_path: Path) -> ParsedDocument:

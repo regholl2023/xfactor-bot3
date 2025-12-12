@@ -1,4 +1,15 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
+import { 
+  TrendingUp, 
+  Bot, 
+  Table, 
+  Settings, 
+  Shield, 
+  Lock, 
+  Newspaper,
+  Wallet,
+  Users
+} from 'lucide-react'
 import { PortfolioCard } from './PortfolioCard'
 import { PositionsTable } from './PositionsTable'
 import { StrategyPanel } from './StrategyPanel'
@@ -7,9 +18,11 @@ import { RiskControls } from './RiskControls'
 import { AdminPanel } from './AdminPanel'
 import { EquityChart } from './EquityChart'
 import { BotManager } from './BotManager'
+import { CollapsiblePanel } from './CollapsiblePanel'
+import { TraderInsights } from './TraderInsights'
 
 export function Dashboard() {
-  const [portfolioData, setPortfolioData] = useState({
+  const [portfolioData] = useState({
     totalValue: 1234567.89,
     dailyPnL: 12345.67,
     dailyPnLPct: 1.2,
@@ -18,9 +31,9 @@ export function Dashboard() {
   })
 
   return (
-    <div className="space-y-6">
-      {/* Top Stats */}
-      <div className="grid grid-cols-3 gap-4">
+    <div className="space-y-4">
+      {/* Top Stats - Always visible */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <PortfolioCard
           title="Portfolio Value"
           value={`$${portfolioData.totalValue.toLocaleString()}`}
@@ -40,32 +53,180 @@ export function Dashboard() {
           trend="neutral"
         />
       </div>
+
+      {/* News & Sentiment Feed - TOP PRIORITY */}
+      <CollapsiblePanel 
+        title="📰 Live News & Sentiment Feed" 
+        icon={<Newspaper className="h-5 w-5" />}
+        badge="100"
+        defaultExpanded={true}
+      >
+        <NewsFeed maxItems={100} itemsPerPage={10} />
+      </CollapsiblePanel>
       
       {/* Main Content */}
-      <div className="grid grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Left Column - Positions & Chart */}
-        <div className="col-span-2 space-y-6">
-          <div className="rounded-lg border border-border bg-card p-4">
-            <h2 className="mb-4 text-lg font-semibold">Equity Curve</h2>
+        <div className="lg:col-span-2 space-y-4">
+          <CollapsiblePanel 
+            title="Equity Curve" 
+            icon={<TrendingUp className="h-5 w-5" />}
+            defaultExpanded={true}
+          >
             <EquityChart height={240} />
-          </div>
+          </CollapsiblePanel>
           
-          <BotManager />
+          <CollapsiblePanel 
+            title="Bot Manager" 
+            icon={<Bot className="h-5 w-5" />}
+            badge="10"
+            defaultExpanded={true}
+          >
+            <BotManagerInner />
+          </CollapsiblePanel>
           
-          <PositionsTable />
+          <CollapsiblePanel 
+            title="Open Positions" 
+            icon={<Table className="h-5 w-5" />}
+            badge={portfolioData.openPositions}
+            defaultExpanded={false}
+          >
+            <PositionsTableInner />
+          </CollapsiblePanel>
         </div>
         
         {/* Right Column - Controls */}
-        <div className="space-y-6">
-          <StrategyPanel />
-          <RiskControls />
-          <AdminPanel />
+        <div className="space-y-4">
+          <CollapsiblePanel 
+            title="Strategy Controls" 
+            icon={<Settings className="h-5 w-5" />}
+            defaultExpanded={true}
+          >
+            <StrategyPanelInner />
+          </CollapsiblePanel>
+          
+          <CollapsiblePanel 
+            title="Risk Management" 
+            icon={<Shield className="h-5 w-5" />}
+            defaultExpanded={false}
+          >
+            <RiskControlsInner />
+          </CollapsiblePanel>
+          
+          <CollapsiblePanel 
+            title="Admin Panel" 
+            icon={<Lock className="h-5 w-5" />}
+            defaultExpanded={false}
+          >
+            <AdminPanelInner />
+          </CollapsiblePanel>
+          
+          <CollapsiblePanel 
+            title="Integrations" 
+            icon={<Wallet className="h-5 w-5" />}
+            defaultExpanded={false}
+          >
+            <IntegrationsPanel />
+          </CollapsiblePanel>
         </div>
       </div>
       
-      {/* News Feed */}
-      <NewsFeed />
+      {/* Trader Insights & Market Intelligence */}
+      <CollapsiblePanel 
+        title="Top Traders & Insider Activity" 
+        icon={<Users className="h-5 w-5" />}
+        defaultExpanded={true}
+      >
+        <TraderInsights />
+      </CollapsiblePanel>
     </div>
   )
 }
 
+// Inner components that strip the card wrapper
+function BotManagerInner() {
+  // Simplified bot display for collapsed view
+  return <BotManager token="" />
+}
+
+function PositionsTableInner() {
+  return <PositionsTable />
+}
+
+function StrategyPanelInner() {
+  return <StrategyPanel />
+}
+
+function RiskControlsInner() {
+  return <RiskControls />
+}
+
+function AdminPanelInner() {
+  return <AdminPanel />
+}
+
+function IntegrationsPanel() {
+  const brokers = [
+    { name: 'Interactive Brokers', status: 'connected', color: 'text-profit' },
+    { name: 'Alpaca', status: 'ready', color: 'text-muted-foreground' },
+    { name: 'Charles Schwab', status: 'ready', color: 'text-muted-foreground' },
+    { name: 'Tradier', status: 'ready', color: 'text-muted-foreground' },
+  ]
+  
+  const dataSources = [
+    { name: 'TradingView', status: 'webhooks active', color: 'text-profit' },
+    { name: 'Polygon.io', status: 'ready', color: 'text-muted-foreground' },
+    { name: 'Yahoo Finance', status: 'enabled', color: 'text-profit' },
+  ]
+  
+  const banking = [
+    { name: 'Plaid', status: 'ready', color: 'text-muted-foreground' },
+  ]
+
+  return (
+    <div className="space-y-4">
+      {/* Brokers */}
+      <div>
+        <h4 className="text-sm font-medium text-muted-foreground mb-2">Brokers</h4>
+        <div className="space-y-2">
+          {brokers.map((broker) => (
+            <div key={broker.name} className="flex items-center justify-between text-sm">
+              <span className="text-foreground">{broker.name}</span>
+              <span className={broker.color}>{broker.status}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      
+      {/* Data Sources */}
+      <div>
+        <h4 className="text-sm font-medium text-muted-foreground mb-2">Data Sources</h4>
+        <div className="space-y-2">
+          {dataSources.map((source) => (
+            <div key={source.name} className="flex items-center justify-between text-sm">
+              <span className="text-foreground">{source.name}</span>
+              <span className={source.color}>{source.status}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      
+      {/* Banking */}
+      <div>
+        <h4 className="text-sm font-medium text-muted-foreground mb-2">Banking</h4>
+        <div className="space-y-2">
+          {banking.map((bank) => (
+            <div key={bank.name} className="flex items-center justify-between text-sm">
+              <span className="text-foreground">{bank.name}</span>
+              <span className={bank.color}>{bank.status}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      
+      <button className="w-full mt-2 px-4 py-2 bg-secondary hover:bg-secondary/80 text-sm rounded-lg transition-colors border border-border">
+        Manage Integrations
+      </button>
+    </div>
+  )
+}

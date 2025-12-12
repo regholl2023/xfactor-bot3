@@ -47,14 +47,20 @@ def create_app() -> FastAPI:
     # CORS middleware
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["http://localhost:3000", "http://localhost:5173"],
+        allow_origins=[
+            "http://localhost:3000",
+            "http://localhost:5173",
+            "http://localhost:9876",
+            "http://localhost:9877",
+            "http://127.0.0.1:9876",
+        ],
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
     )
     
     # Include routers
-    from src.api.routes import config, positions, orders, risk, news, admin, bots, ai
+    from src.api.routes import config, positions, orders, risk, news, admin, bots, ai, integrations
     
     app.include_router(config.router, prefix="/api/config", tags=["Config"])
     app.include_router(positions.router, prefix="/api/positions", tags=["Positions"])
@@ -64,6 +70,7 @@ def create_app() -> FastAPI:
     app.include_router(admin.router, prefix="/api/admin", tags=["Admin"])
     app.include_router(bots.router, prefix="/api/bots", tags=["Bots"])
     app.include_router(ai.router, prefix="/api", tags=["AI Assistant"])
+    app.include_router(integrations.router, prefix="/api/integrations", tags=["Integrations"])
     
     @app.get("/")
     async def root():

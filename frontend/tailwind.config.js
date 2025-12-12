@@ -7,31 +7,39 @@ export default {
   theme: {
     extend: {
       colors: {
-        background: "hsl(222, 47%, 11%)",
-        foreground: "hsl(210, 40%, 98%)",
-        card: "hsl(222, 47%, 14%)",
-        "card-foreground": "hsl(210, 40%, 98%)",
-        primary: "hsl(142, 76%, 36%)",
+        // XFactor Bot color scheme - matching logo
+        background: "hsl(200, 25%, 18%)",      // Dark slate blue-gray (#2D3E4A)
+        foreground: "hsl(38, 30%, 85%)",       // Warm cream text
+        card: "hsl(200, 25%, 22%)",            // Slightly lighter slate
+        "card-foreground": "hsl(38, 30%, 90%)",
+        primary: "hsl(95, 35%, 45%)",          // Money green from logo
         "primary-foreground": "hsl(0, 0%, 100%)",
-        secondary: "hsl(217, 33%, 17%)",
-        "secondary-foreground": "hsl(210, 40%, 98%)",
-        muted: "hsl(217, 33%, 17%)",
-        "muted-foreground": "hsl(215, 20%, 65%)",
-        accent: "hsl(217, 33%, 17%)",
-        "accent-foreground": "hsl(210, 40%, 98%)",
-        destructive: "hsl(0, 84%, 60%)",
+        secondary: "hsl(200, 20%, 28%)",       // Muted slate
+        "secondary-foreground": "hsl(38, 30%, 85%)",
+        muted: "hsl(200, 20%, 25%)",
+        "muted-foreground": "hsl(200, 15%, 55%)",
+        accent: "hsl(185, 45%, 45%)",          // Teal accent (BOT text color)
+        "accent-foreground": "hsl(38, 30%, 90%)",
+        destructive: "hsl(0, 70%, 55%)",
         "destructive-foreground": "hsl(0, 0%, 100%)",
-        border: "hsl(217, 33%, 22%)",
-        input: "hsl(217, 33%, 17%)",
-        ring: "hsl(142, 76%, 36%)",
-        profit: "hsl(142, 76%, 36%)",
-        loss: "hsl(0, 84%, 60%)",
+        border: "hsl(200, 20%, 30%)",
+        input: "hsl(200, 20%, 25%)",
+        ring: "hsl(185, 45%, 45%)",
+        profit: "hsl(95, 40%, 50%)",           // Green for profits
+        loss: "hsl(0, 70%, 55%)",              // Red for losses
+        xfactor: {
+          slate: "hsl(200, 25%, 18%)",         // Main background
+          robot: "hsl(200, 20%, 55%)",         // Robot metallic color
+          gold: "hsl(38, 35%, 70%)",           // XFACTOR text color
+          teal: "hsl(185, 45%, 45%)",          // BOT text color
+          money: "hsl(95, 35%, 45%)",          // Money green
+        }
       },
       fontFamily: {
         sans: ["JetBrains Mono", "monospace"],
+        display: ["Impact", "Haettenschweiler", "sans-serif"],
       },
     },
   },
   plugins: [],
 }
-

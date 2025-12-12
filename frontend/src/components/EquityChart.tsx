@@ -96,9 +96,15 @@ export function EquityChart({ height = 280 }: EquityChartProps) {
   useEffect(() => {
     if (!chartContainerRef.current) return
 
-    // Remove existing chart
+    // Clean up existing chart safely
     if (chartRef.current) {
-      chartRef.current.remove()
+      try {
+        chartRef.current.remove()
+      } catch (e) {
+        // Chart may already be disposed, ignore error
+      }
+      chartRef.current = null
+      seriesRef.current = null
     }
 
     // Create chart
@@ -163,7 +169,11 @@ export function EquityChart({ height = 280 }: EquityChartProps) {
     // Handle resize
     const handleResize = () => {
       if (chartContainerRef.current && chartRef.current) {
-        chartRef.current.applyOptions({ width: chartContainerRef.current.clientWidth })
+        try {
+          chartRef.current.applyOptions({ width: chartContainerRef.current.clientWidth })
+        } catch (e) {
+          // Chart may be disposed during resize, ignore
+        }
       }
     }
 
@@ -171,7 +181,15 @@ export function EquityChart({ height = 280 }: EquityChartProps) {
 
     return () => {
       window.removeEventListener('resize', handleResize)
-      chart.remove()
+      if (chartRef.current) {
+        try {
+          chartRef.current.remove()
+        } catch (e) {
+          // Chart may already be disposed, ignore error
+        }
+        chartRef.current = null
+        seriesRef.current = null
+      }
     }
   }, [filteredData, height, isPositive])
 
