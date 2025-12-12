@@ -165,7 +165,7 @@ class BotInstance:
     - Run independently of other bots
     """
     
-    MAX_BOTS = 10  # Maximum number of bots allowed
+    MAX_BOTS = 25  # Maximum number of bots allowed (stocks, options, futures, leveraged ETFs)
     
     def __init__(self, config: BotConfig, bot_id: str = None):
         """

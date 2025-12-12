@@ -165,7 +165,7 @@ export function BotManager({ token = '' }: BotManagerProps) {
           <Bot className="h-5 w-5 text-primary" />
           <h2 className="text-lg font-semibold">Bot Manager</h2>
           <span className="text-sm text-muted-foreground">
-            ({bots.length}/10)
+            ({bots.length}/25)
           </span>
         </div>
         
@@ -377,7 +377,7 @@ export function BotManager({ token = '' }: BotManagerProps) {
       ) : (
         <button
           onClick={() => setShowCreateForm(true)}
-          disabled={bots.length >= 10}
+          disabled={bots.length >= 25}
           className="mt-4 w-full flex items-center justify-center gap-2 rounded-lg border border-dashed border-border py-2 text-sm text-muted-foreground hover:border-primary hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Plus className="h-4 w-4" />
