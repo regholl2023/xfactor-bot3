@@ -294,3 +294,15 @@ class RedisCache:
         }
         await self.publish("news_alerts", message)
 
+
+# Singleton instance
+_redis_cache: Optional[RedisCache] = None
+
+
+def get_redis_cache() -> RedisCache:
+    """Get or create Redis cache instance."""
+    global _redis_cache
+    if _redis_cache is None:
+        _redis_cache = RedisCache()
+    return _redis_cache
+

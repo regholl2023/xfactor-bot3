@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Dashboard } from './components/Dashboard'
 import { Header } from './components/Header'
+import { AIAssistant } from './components/AIAssistant'
 
 function App() {
   const [connected, setConnected] = useState(false)
@@ -47,6 +48,7 @@ function App() {
       <main className="container mx-auto p-4">
         <Dashboard />
       </main>
+      <AIAssistant />
     </div>
   )
 }
