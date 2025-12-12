@@ -4,6 +4,7 @@ import { PositionsTable } from './PositionsTable'
 import { StrategyPanel } from './StrategyPanel'
 import { NewsFeed } from './NewsFeed'
 import { RiskControls } from './RiskControls'
+import { AdminPanel } from './AdminPanel'
 
 export function Dashboard() {
   const [portfolioData, setPortfolioData] = useState({
@@ -56,6 +57,7 @@ export function Dashboard() {
         <div className="space-y-6">
           <StrategyPanel />
           <RiskControls />
+          <AdminPanel />
         </div>
       </div>
       
