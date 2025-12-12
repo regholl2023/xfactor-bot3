@@ -3,12 +3,15 @@ FastAPI application for XFactor Bot Control Panel.
 XFactor Bot - AI-Powered Automated Trading System
 """
 
+import os
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import AsyncGenerator
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response
+from fastapi.responses import Response, FileResponse
+from fastapi.staticfiles import StaticFiles
 from loguru import logger
 
 from src.config.settings import get_settings
@@ -53,6 +56,9 @@ def create_app() -> FastAPI:
             "http://localhost:9876",
             "http://localhost:9877",
             "http://127.0.0.1:9876",
+            "http://foresight.nvidia.com:9876",
+            "https://foresight.nvidia.com:9876",
+            "*",  # Allow all origins for easier development
         ],
         allow_credentials=True,
         allow_methods=["*"],
@@ -60,7 +66,7 @@ def create_app() -> FastAPI:
     )
     
     # Include routers
-    from src.api.routes import config, positions, orders, risk, news, admin, bots, ai, integrations
+    from src.api.routes import config, positions, orders, risk, news, admin, bots, ai, integrations, commodities, crypto, fees
     
     app.include_router(config.router, prefix="/api/config", tags=["Config"])
     app.include_router(positions.router, prefix="/api/positions", tags=["Positions"])
@@ -71,9 +77,12 @@ def create_app() -> FastAPI:
     app.include_router(bots.router, prefix="/api/bots", tags=["Bots"])
     app.include_router(ai.router, prefix="/api", tags=["AI Assistant"])
     app.include_router(integrations.router, prefix="/api/integrations", tags=["Integrations"])
+    app.include_router(commodities.router, prefix="/api/commodities", tags=["Commodities"])
+    app.include_router(crypto.router, prefix="/api/crypto", tags=["Crypto"])
+    app.include_router(fees.router, prefix="/api/fees", tags=["Fees"])
     
-    @app.get("/")
-    async def root():
+    @app.get("/api")
+    async def api_root():
         return {"status": "ok", "name": "XFactor Bot", "version": "0.1.0", "description": "AI-Powered Automated Trading System"}
     
     @app.get("/health")
@@ -108,6 +117,40 @@ def create_app() -> FastAPI:
             logger.info("WebSocket client disconnected")
         except Exception as e:
             logger.error(f"WebSocket error: {e}")
+    
+    # Serve static frontend files
+    frontend_dist = Path(__file__).parent.parent.parent / "frontend" / "dist"
+    if frontend_dist.exists():
+        # Mount static assets
+        app.mount("/assets", StaticFiles(directory=str(frontend_dist / "assets")), name="assets")
+        
+        # Serve index.html for root
+        @app.get("/")
+        async def serve_root():
+            index_file = frontend_dist / "index.html"
+            if index_file.exists():
+                return FileResponse(str(index_file), media_type="text/html")
+            return {"error": "Frontend not built"}
+        
+        # Serve index.html for all non-API routes (SPA fallback)
+        @app.get("/{full_path:path}")
+        async def serve_spa(full_path: str):
+            # Don't intercept API, health, metrics, or ws routes
+            if full_path.startswith(("api", "health", "metrics", "ws", "docs", "openapi.json", "redoc")):
+                return {"error": "Not found", "path": full_path}
+            
+            index_file = frontend_dist / "index.html"
+            if index_file.exists():
+                return FileResponse(str(index_file), media_type="text/html")
+            return {"error": "Frontend not built"}
+        
+        logger.info(f"📁 Serving frontend from {frontend_dist}")
+    else:
+        logger.warning(f"⚠️ Frontend dist not found at {frontend_dist}")
+        
+        @app.get("/")
+        async def root_no_frontend():
+            return {"status": "ok", "name": "XFactor Bot", "version": "0.1.0", "description": "AI-Powered Automated Trading System", "note": "Frontend not deployed"}
     
     return app
 

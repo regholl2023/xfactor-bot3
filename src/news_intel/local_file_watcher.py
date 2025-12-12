@@ -75,7 +75,7 @@ class DocumentParser:
     async def _parse_pdf(self, file_path: Path) -> ParsedDocument:
         """Parse PDF document."""
         try:
-            from pypdf import PdfReader
+            from pypdf import PdfReader  # type: ignore[import-untyped,import-not-found]
             
             loop = asyncio.get_event_loop()
             
@@ -106,7 +106,7 @@ class DocumentParser:
     async def _parse_docx(self, file_path: Path) -> ParsedDocument:
         """Parse Word document."""
         try:
-            from docx import Document
+            from docx import Document  # type: ignore[import-untyped]
             
             loop = asyncio.get_event_loop()
             

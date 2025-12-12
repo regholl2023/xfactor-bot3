@@ -9,6 +9,9 @@ from datetime import datetime
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
 
+# Configure pytest-asyncio
+pytest_plugins = ('pytest_asyncio',)
+
 
 @pytest.fixture(scope="session")
 def event_loop() -> Generator[asyncio.AbstractEventLoop, None, None]:

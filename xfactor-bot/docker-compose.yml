@@ -1,16 +1,16 @@
-version: '3.8'
-
 # XFactor Bot - Automated Trading System
 # https://gitlab-master.nvidia.com/cvanthin/000_trading
+
+name: xfactor-bot
 
 services:
   xfactor-bot:
     build:
       context: ..
-      dockerfile: docker/Dockerfile
+      dockerfile: xfactor-bot/Dockerfile
     container_name: xfactor-bot
     ports:
-      - "8765:8000"
+      - "9876:8000"
     environment:
       - IBKR_HOST=host.docker.internal
       - IBKR_PORT=7497

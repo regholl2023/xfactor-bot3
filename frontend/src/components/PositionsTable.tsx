@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
-import { RefreshCw, TrendingUp, TrendingDown, Search, SortAsc, SortDesc, X } from 'lucide-react'
+import { RefreshCw, TrendingUp, TrendingDown, Search, SortAsc, SortDesc, X, Info, AlertTriangle, Wallet, Bot, TestTube2, Shield, Zap } from 'lucide-react'
+import { useTradingMode } from '../context/TradingModeContext'
 
 interface Position {
   symbol: string
@@ -23,35 +24,42 @@ interface PortfolioSummary {
   position_count: number
 }
 
-// Mock data for development
-const mockPositions: Position[] = [
-  { symbol: 'NVDA', quantity: 100, avg_cost: 450.50, current_price: 475.25, market_value: 47525, unrealized_pnl: 2475, unrealized_pnl_pct: 5.49, sector: 'Technology', strategy: 'Momentum' },
-  { symbol: 'AAPL', quantity: 200, avg_cost: 175.00, current_price: 179.50, market_value: 35900, unrealized_pnl: 900, unrealized_pnl_pct: 2.57, sector: 'Technology', strategy: 'Technical' },
-  { symbol: 'TSLA', quantity: -50, avg_cost: 240.00, current_price: 245.80, market_value: -12290, unrealized_pnl: -290, unrealized_pnl_pct: -2.42, sector: 'Consumer', strategy: 'MeanReversion' },
-  { symbol: 'MSFT', quantity: 150, avg_cost: 360.00, current_price: 368.25, market_value: 55237.5, unrealized_pnl: 1237.5, unrealized_pnl_pct: 2.29, sector: 'Technology', strategy: 'Technical' },
-  { symbol: 'AMD', quantity: 300, avg_cost: 115.00, current_price: 117.50, market_value: 35250, unrealized_pnl: 750, unrealized_pnl_pct: 2.17, sector: 'Technology', strategy: 'NewsSentiment' },
-  { symbol: 'GOOGL', quantity: 80, avg_cost: 140.00, current_price: 142.30, market_value: 11384, unrealized_pnl: 184, unrealized_pnl_pct: 1.64, sector: 'Technology', strategy: 'Momentum' },
-  { symbol: 'SPY', quantity: 100, avg_cost: 450.00, current_price: 455.20, market_value: 45520, unrealized_pnl: 520, unrealized_pnl_pct: 1.16, sector: 'ETF', strategy: 'Technical' },
-]
+// Empty positions - real data comes from broker API when connected
+const emptyPositions: Position[] = []
+
+const emptySummary: PortfolioSummary = {
+  total_value: 0,
+  cash: 0,
+  positions_value: 0,
+  unrealized_pnl: 0,
+  realized_pnl: 0,
+  daily_pnl: 0,
+  position_count: 0,
+}
 
 type SortField = 'symbol' | 'quantity' | 'market_value' | 'unrealized_pnl' | 'unrealized_pnl_pct'
 type SortDir = 'asc' | 'desc'
 
 export function PositionsTable() {
-  const [positions, setPositions] = useState<Position[]>(mockPositions)
-  const [summary, setSummary] = useState<PortfolioSummary>({
-    total_value: 250000,
-    cash: 31383.5,
-    positions_value: 218616.5,
-    unrealized_pnl: 5776.5,
-    realized_pnl: 12500,
-    daily_pnl: 3240,
-    position_count: 7,
-  })
+  const { mode, broker } = useTradingMode()
+  const [positions, setPositions] = useState<Position[]>(emptyPositions)
+  const [summary, setSummary] = useState<PortfolioSummary>(emptySummary)
   const [loading, setLoading] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [sortField, setSortField] = useState<SortField>('unrealized_pnl')
   const [sortDir, setSortDir] = useState<SortDir>('desc')
+  const [showHelp, setShowHelp] = useState(false)
+  const [isLiveData, setIsLiveData] = useState(false)
+  
+  const getModeLabel = () => {
+    switch (mode) {
+      case 'demo': return { label: 'Demo Mode', icon: <TestTube2 className="h-4 w-4" />, color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20' }
+      case 'paper': return { label: 'Paper Trading', icon: <Shield className="h-4 w-4" />, color: 'text-amber-400', bg: 'bg-amber-500/10', border: 'border-amber-500/20' }
+      case 'live': return { label: 'LIVE Trading', icon: <Zap className="h-4 w-4" />, color: 'text-profit', bg: 'bg-profit/10', border: 'border-profit/20' }
+    }
+  }
+  
+  const modeInfo = getModeLabel()
 
   const fetchPositions = async () => {
     setLoading(true)
@@ -63,20 +71,32 @@ export function PositionsTable() {
       
       if (posRes.ok) {
         const data = await posRes.json()
-        if (data.positions && data.positions.length > 0) {
-          setPositions(data.positions)
-        }
-        // If no positions from API, keep mock data
+        setPositions(data.positions || [])
+        setIsLiveData(data.positions && data.positions.length > 0)
+      } else {
+        setPositions([])
+        setIsLiveData(false)
       }
       
       if (summaryRes.ok) {
         const data = await summaryRes.json()
-        if (data.total_value > 0) {
-          setSummary(data)
-        }
+        setSummary({
+          total_value: data.total_value || 0,
+          cash: data.cash || 0,
+          positions_value: data.positions_value || 0,
+          unrealized_pnl: data.unrealized_pnl || 0,
+          realized_pnl: data.realized_pnl || 0,
+          daily_pnl: data.daily_pnl || 0,
+          position_count: data.position_count || 0,
+        })
+      } else {
+        setSummary(emptySummary)
       }
     } catch (e) {
       console.error('Failed to fetch positions:', e)
+      setPositions([])
+      setSummary(emptySummary)
+      setIsLiveData(false)
     }
     setLoading(false)
   }
@@ -141,6 +161,96 @@ export function PositionsTable() {
 
   return (
     <div className="space-y-4">
+      {/* Trading Mode Status Banner */}
+      <div className={`flex items-center gap-3 p-3 rounded-lg ${modeInfo.bg} border ${modeInfo.border}`}>
+        <span className={modeInfo.color}>{modeInfo.icon}</span>
+        <div className="flex-1">
+          <div className={`text-sm font-medium ${modeInfo.color}`}>{modeInfo.label}</div>
+          <div className="text-xs text-muted-foreground">
+            {mode === 'demo' && 'Showing sample positions for demonstration. Connect a broker for real data.'}
+            {mode === 'paper' && (broker.isConnected 
+              ? `Connected to ${broker.provider?.toUpperCase()}. Simulated trades - no real money at risk.`
+              : 'Paper trading mode. Connect a broker in Admin panel to start.'
+            )}
+            {mode === 'live' && `⚠️ LIVE TRADING - Real money. Connected to ${broker.provider?.toUpperCase()} (${broker.accountId})`}
+          </div>
+        </div>
+        <button
+          onClick={() => setShowHelp(!showHelp)}
+          className={`px-3 py-1.5 text-xs rounded-lg ${modeInfo.bg} ${modeInfo.color} hover:opacity-80 transition-colors border ${modeInfo.border}`}
+        >
+          Learn More
+        </button>
+      </div>
+
+      {/* Help Panel */}
+      {showHelp && (
+        <div className="p-4 rounded-lg bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20">
+          <div className="flex items-start justify-between">
+            <div className="flex items-start gap-3">
+              <Info className="h-5 w-5 text-blue-400 mt-0.5" />
+              <div>
+                <h4 className="font-medium text-foreground mb-2">Understanding Open Positions</h4>
+                <div className="space-y-3 text-sm text-muted-foreground">
+                  <p>
+                    <strong className="text-foreground">Open Positions</strong> are stocks, ETFs, or other securities currently held in your brokerage account.
+                    These positions are created when your trading bots execute buy orders through your connected broker.
+                  </p>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="p-3 rounded-lg bg-background/50">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Wallet className="h-4 w-4 text-xfactor-teal" />
+                        <span className="font-medium text-foreground">Position Types</span>
+                      </div>
+                      <ul className="space-y-1 text-xs">
+                        <li className="flex items-center gap-2">
+                          <TrendingUp className="h-3 w-3 text-profit" />
+                          <span><strong>Long</strong> (positive qty) - You own shares, profit when price rises</span>
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <TrendingDown className="h-3 w-3 text-loss" />
+                          <span><strong>Short</strong> (negative qty) - Borrowed shares, profit when price falls</span>
+                        </li>
+                      </ul>
+                    </div>
+                    
+                    <div className="p-3 rounded-lg bg-background/50">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Bot className="h-4 w-4 text-xfactor-teal" />
+                        <span className="font-medium text-foreground">How Positions Are Opened</span>
+                      </div>
+                      <ul className="space-y-1 text-xs">
+                        <li>• Bots analyze market data and news sentiment</li>
+                        <li>• When signals trigger, orders are sent to your broker</li>
+                        <li>• Executed orders become open positions</li>
+                        <li>• Bots manage exits based on strategy rules</li>
+                      </ul>
+                    </div>
+                  </div>
+                  
+                  <div className="p-3 rounded-lg bg-background/50">
+                    <div className="font-medium text-foreground mb-1">Key Metrics Explained</div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                      <div><strong>Qty:</strong> Number of shares held</div>
+                      <div><strong>Avg Cost:</strong> Your purchase price per share</div>
+                      <div><strong>P&L:</strong> Unrealized profit/loss (not yet sold)</div>
+                      <div><strong>Strategy:</strong> Which bot strategy opened this position</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowHelp(false)}
+              className="p-1 hover:bg-secondary rounded shrink-0"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div className="p-3 rounded-lg bg-secondary/50">
@@ -183,9 +293,17 @@ export function PositionsTable() {
           )}
         </div>
         <button
+          onClick={() => setShowHelp(!showHelp)}
+          className={`p-2 rounded-lg transition-colors ${showHelp ? 'bg-blue-500/20 text-blue-400' : 'bg-secondary hover:bg-secondary/80'}`}
+          title="What are open positions?"
+        >
+          <Info className="h-4 w-4" />
+        </button>
+        <button
           onClick={fetchPositions}
           disabled={loading}
           className="p-2 rounded-lg bg-secondary hover:bg-secondary/80"
+          title="Refresh positions"
         >
           <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
         </button>

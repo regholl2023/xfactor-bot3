@@ -3,6 +3,7 @@ import { Dashboard } from './components/Dashboard'
 import { Header } from './components/Header'
 import { AIAssistant } from './components/AIAssistant'
 import { AuthProvider } from './context/AuthContext'
+import { TradingModeProvider } from './context/TradingModeContext'
 
 function App() {
   const [connected, setConnected] = useState(false)
@@ -14,7 +15,7 @@ function App() {
     const wsUrl = `${protocol}//${window.location.host}/ws`
     
     let websocket: WebSocket | null = null
-    let reconnectTimeout: NodeJS.Timeout | null = null
+    let reconnectTimeout: ReturnType<typeof setTimeout> | null = null
     
     const connect = () => {
       try {
@@ -72,13 +73,15 @@ function App() {
 
   return (
     <AuthProvider>
-      <div className="min-h-screen bg-background">
-        <Header connected={connected} />
-        <main className="container mx-auto p-4">
-          <Dashboard />
-        </main>
-        <AIAssistant />
-      </div>
+      <TradingModeProvider>
+        <div className="min-h-screen bg-background">
+          <Header connected={connected} />
+          <main className="container mx-auto p-4">
+            <Dashboard />
+          </main>
+          <AIAssistant />
+        </div>
+      </TradingModeProvider>
     </AuthProvider>
   )
 }

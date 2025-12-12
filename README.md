@@ -77,7 +77,7 @@ cp .env.example .env
 
 ### 4. Start with Docker
 ```bash
-docker compose -f docker/docker-compose.yml up -d
+docker compose -f xfactor-bot/docker-compose.yml up -d
 ```
 
 ### 5. Start the frontend
@@ -156,7 +156,7 @@ OPENAI_API_KEY=your_key
 │   ├── mcp/              # MCP server for AI tools
 │   └── monitoring/       # Prometheus metrics
 ├── frontend/             # React dashboard
-├── docker/               # Docker configuration
+├── xfactor-bot/          # Docker configuration
 └── new_news/             # Local news file drop folder
 ```
 

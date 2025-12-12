@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { 
   TrendingUp, 
   Bot, 
@@ -8,7 +8,10 @@ import {
   Lock, 
   Newspaper,
   Wallet,
-  Users
+  Users,
+  Gem,
+  Coins,
+  DollarSign
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { PortfolioCard } from './PortfolioCard'
@@ -21,15 +24,44 @@ import { EquityChart } from './EquityChart'
 import { BotManager } from './BotManager'
 import { CollapsiblePanel } from './CollapsiblePanel'
 import { TraderInsights } from './TraderInsights'
+import CommodityPanel from './CommodityPanel'
+import { CryptoPanel } from './CryptoPanel'
+import { FeeTracker } from './FeeTracker'
 
 export function Dashboard() {
-  const [portfolioData] = useState({
-    totalValue: 1234567.89,
-    dailyPnL: 12345.67,
-    dailyPnLPct: 1.2,
-    openPositions: 24,
-    exposure: 450000,
+  // Portfolio data - will be populated when broker is connected
+  const [portfolioData, setPortfolioData] = useState({
+    totalValue: 0,
+    dailyPnL: 0,
+    dailyPnLPct: 0,
+    openPositions: 0,
+    exposure: 0,
   })
+  
+  // Fetch portfolio summary
+  useEffect(() => {
+    const fetchPortfolio = async () => {
+      try {
+        const res = await fetch('/api/positions/summary')
+        if (res.ok) {
+          const data = await res.json()
+          setPortfolioData({
+            totalValue: data.total_value || 0,
+            dailyPnL: data.daily_pnl || 0,
+            dailyPnLPct: data.total_value > 0 ? (data.daily_pnl / data.total_value) * 100 : 0,
+            openPositions: data.position_count || 0,
+            exposure: data.positions_value || 0,
+          })
+        }
+      } catch (e) {
+        console.error('Failed to fetch portfolio:', e)
+      }
+    }
+    
+    fetchPortfolio()
+    const interval = setInterval(fetchPortfolio, 15000)
+    return () => clearInterval(interval)
+  }, [])
 
   return (
     <div className="space-y-4">
@@ -129,8 +161,37 @@ export function Dashboard() {
           >
             <IntegrationsPanel />
           </CollapsiblePanel>
+          
+          <CollapsiblePanel 
+            title="Fees & Expenses" 
+            icon={<DollarSign className="h-5 w-5" />}
+            badge="costs"
+            defaultExpanded={false}
+          >
+            <FeeTracker />
+          </CollapsiblePanel>
         </div>
       </div>
+      
+      {/* Cryptocurrency Trading */}
+      <CollapsiblePanel 
+        title="₿ Cryptocurrency Trading" 
+        icon={<Coins className="h-5 w-5" />}
+        badge="crypto"
+        defaultExpanded={true}
+      >
+        <CryptoPanel />
+      </CollapsiblePanel>
+      
+      {/* Commodities & Resources */}
+      <CollapsiblePanel 
+        title="⛏️ Commodities & Resources" 
+        icon={<Gem className="h-5 w-5" />}
+        badge="minerals"
+        defaultExpanded={false}
+      >
+        <CommodityPanel />
+      </CollapsiblePanel>
       
       {/* Trader Insights & Market Intelligence */}
       <CollapsiblePanel 

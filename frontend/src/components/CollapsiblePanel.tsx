@@ -112,15 +112,11 @@ export function CollapsiblePanel({
       </div>
       
       {/* Content */}
-      <div
-        className={`transition-all duration-200 ease-in-out overflow-hidden ${
-          isExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'
-        }`}
-      >
+      {isExpanded && (
         <div className="p-4 pt-2 collapsible-content">
           {children}
         </div>
-      </div>
+      )}
     </div>
   )
 }

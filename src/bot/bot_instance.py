@@ -30,6 +30,106 @@ class InstrumentType(str, Enum):
     OPTIONS = "options"
     FUTURES = "futures"
     CRYPTO = "crypto"
+    COMMODITY = "commodity"  # Precious metals, energy, agriculture
+
+
+# Commodity symbols and their ETF proxies
+COMMODITY_SYMBOLS = {
+    # Precious Metals
+    "gold": {"etf": "GLD", "futures": "GC", "miners": ["GDX", "GDXJ", "NEM", "GOLD", "AEM"]},
+    "silver": {"etf": "SLV", "futures": "SI", "miners": ["SIL", "PAAS", "AG", "HL"]},
+    "platinum": {"etf": "PPLT", "futures": "PL", "miners": ["SBSW", "IMPUY"]},
+    "palladium": {"etf": "PALL", "futures": "PA", "related": ["SBSW"]},
+    
+    # Energy
+    "oil": {"etf": "USO", "futures": "CL", "stocks": ["XOM", "CVX", "COP", "OXY", "SLB"]},
+    "natural_gas": {"etf": "UNG", "futures": "NG", "stocks": ["EQT", "AR", "RRC", "SWN"]},
+    "gasoline": {"etf": "UGA", "futures": "RB", "related": ["VLO", "MPC", "PSX"]},
+    "heating_oil": {"futures": "HO", "related": ["VLO", "MPC"]},
+    
+    # Industrial Metals
+    "copper": {"etf": "CPER", "futures": "HG", "miners": ["FCX", "SCCO", "TECK"]},
+    "aluminum": {"futures": "ALI", "stocks": ["AA", "CENX"]},
+    "nickel": {"futures": "NI", "stocks": ["VALE", "BHP"]},
+    "zinc": {"futures": "ZN", "stocks": ["TECK", "VALE"]},
+    "lithium": {"etf": "LIT", "stocks": ["ALB", "SQM", "LTHM", "LAC"]},
+    "uranium": {"etf": "URA", "stocks": ["CCJ", "UEC", "UUUU", "DNN"]},
+    
+    # Rare/Strategic Metals
+    "titanium": {"stocks": ["TIE", "RTX", "BA"]},  # Used in aerospace
+    "cobalt": {"stocks": ["VALE", "GLNCY"]},
+    "rare_earth": {"etf": "REMX", "stocks": ["MP", "LYSCF"]},
+    
+    # Agriculture
+    "corn": {"etf": "CORN", "futures": "ZC", "stocks": ["ADM", "BG", "DE"]},
+    "wheat": {"etf": "WEAT", "futures": "ZW", "stocks": ["ADM", "BG"]},
+    "soybeans": {"etf": "SOYB", "futures": "ZS", "stocks": ["ADM", "BG"]},
+    "coffee": {"etf": "JO", "futures": "KC", "stocks": ["SBUX", "KDP"]},
+    "sugar": {"etf": "CANE", "futures": "SB", "stocks": []},
+    
+    # Broad Commodity ETFs
+    "broad": {"etf": ["DBC", "GSG", "PDBC", "COM"], "description": "Diversified commodity exposure"},
+}
+
+
+# Cryptocurrency symbols and categories
+CRYPTO_SYMBOLS = {
+    # Major Cryptocurrencies
+    "bitcoin": {"symbol": "BTC", "pairs": ["BTC-USD", "BTC-USDT"], "category": "major"},
+    "ethereum": {"symbol": "ETH", "pairs": ["ETH-USD", "ETH-USDT"], "category": "major"},
+    "solana": {"symbol": "SOL", "pairs": ["SOL-USD", "SOL-USDT"], "category": "major"},
+    "xrp": {"symbol": "XRP", "pairs": ["XRP-USD", "XRP-USDT"], "category": "major"},
+    "cardano": {"symbol": "ADA", "pairs": ["ADA-USD", "ADA-USDT"], "category": "major"},
+    "avalanche": {"symbol": "AVAX", "pairs": ["AVAX-USD", "AVAX-USDT"], "category": "major"},
+    "polkadot": {"symbol": "DOT", "pairs": ["DOT-USD", "DOT-USDT"], "category": "major"},
+    "polygon": {"symbol": "MATIC", "pairs": ["MATIC-USD", "MATIC-USDT"], "category": "layer2"},
+    
+    # Layer 2 & Scaling
+    "arbitrum": {"symbol": "ARB", "pairs": ["ARB-USD", "ARB-USDT"], "category": "layer2"},
+    "optimism": {"symbol": "OP", "pairs": ["OP-USD", "OP-USDT"], "category": "layer2"},
+    
+    # DeFi Tokens
+    "uniswap": {"symbol": "UNI", "pairs": ["UNI-USD", "UNI-USDT"], "category": "defi"},
+    "aave": {"symbol": "AAVE", "pairs": ["AAVE-USD", "AAVE-USDT"], "category": "defi"},
+    "chainlink": {"symbol": "LINK", "pairs": ["LINK-USD", "LINK-USDT"], "category": "defi"},
+    "maker": {"symbol": "MKR", "pairs": ["MKR-USD", "MKR-USDT"], "category": "defi"},
+    "compound": {"symbol": "COMP", "pairs": ["COMP-USD", "COMP-USDT"], "category": "defi"},
+    
+    # Meme Coins
+    "dogecoin": {"symbol": "DOGE", "pairs": ["DOGE-USD", "DOGE-USDT"], "category": "meme"},
+    "shiba": {"symbol": "SHIB", "pairs": ["SHIB-USD", "SHIB-USDT"], "category": "meme"},
+    "pepe": {"symbol": "PEPE", "pairs": ["PEPE-USD", "PEPE-USDT"], "category": "meme"},
+    
+    # AI & Compute Tokens
+    "render": {"symbol": "RNDR", "pairs": ["RNDR-USD", "RNDR-USDT"], "category": "ai"},
+    "fetch": {"symbol": "FET", "pairs": ["FET-USD", "FET-USDT"], "category": "ai"},
+    "ocean": {"symbol": "OCEAN", "pairs": ["OCEAN-USD", "OCEAN-USDT"], "category": "ai"},
+    "akash": {"symbol": "AKT", "pairs": ["AKT-USD", "AKT-USDT"], "category": "ai"},
+    
+    # Gaming & Metaverse
+    "immutablex": {"symbol": "IMX", "pairs": ["IMX-USD", "IMX-USDT"], "category": "gaming"},
+    "gala": {"symbol": "GALA", "pairs": ["GALA-USD", "GALA-USDT"], "category": "gaming"},
+    "sandbox": {"symbol": "SAND", "pairs": ["SAND-USD", "SAND-USDT"], "category": "gaming"},
+    "axie": {"symbol": "AXS", "pairs": ["AXS-USD", "AXS-USDT"], "category": "gaming"},
+    
+    # Stablecoins (for pairs)
+    "usdt": {"symbol": "USDT", "pairs": [], "category": "stablecoin"},
+    "usdc": {"symbol": "USDC", "pairs": [], "category": "stablecoin"},
+    
+    # Crypto ETFs (tradeable on stock exchanges)
+    "crypto_etfs": {
+        "IBIT": "iShares Bitcoin Trust",
+        "FBTC": "Fidelity Bitcoin ETF",
+        "GBTC": "Grayscale Bitcoin Trust",
+        "ETHE": "Grayscale Ethereum Trust",
+        "BITO": "ProShares Bitcoin Strategy ETF",
+        "COIN": "Coinbase Stock",
+        "MSTR": "MicroStrategy (Bitcoin proxy)",
+        "MARA": "Marathon Digital Holdings",
+        "RIOT": "Riot Platforms",
+        "CLSK": "CleanSpark",
+    }
+}
 
 
 # All available strategies
@@ -114,6 +214,36 @@ class BotConfig:
     futures_session: str = "rth"  # "rth" (regular) or "eth" (extended)
     
     # =========================================================================
+    # Commodity-specific settings
+    # =========================================================================
+    commodity_type: str = ""  # "gold", "silver", "oil", etc.
+    commodity_trade_etfs: bool = True  # Trade ETFs like GLD, USO
+    commodity_trade_miners: bool = False  # Trade mining stocks
+    commodity_trade_futures: bool = False  # Trade commodity futures
+    commodity_seasonal_trading: bool = True  # Consider seasonal patterns
+    commodity_macro_alerts: bool = True  # Monitor Fed, inflation, USD
+    commodity_geopolitical_alerts: bool = True  # Monitor supply disruptions
+    
+    # =========================================================================
+    # Crypto-specific settings
+    # =========================================================================
+    crypto_category: str = ""  # "major", "defi", "layer2", "meme", "ai", "gaming"
+    crypto_exchange: str = "coinbase"  # "coinbase", "binance", "kraken", "alpaca"
+    crypto_trade_spot: bool = True  # Spot trading
+    crypto_trade_perpetuals: bool = False  # Perpetual futures
+    crypto_trade_etfs: bool = True  # Crypto ETFs like IBIT, GBTC
+    crypto_use_leverage: bool = False  # Use leverage on perpetuals
+    crypto_leverage_max: float = 2.0  # Maximum leverage multiplier
+    crypto_dca_enabled: bool = True  # Dollar-cost averaging on entries
+    crypto_dca_intervals: int = 4  # Split entry into X parts
+    crypto_trailing_stop_pct: float = 5.0  # Trailing stop percentage
+    crypto_take_profit_pct: float = 15.0  # Take profit percentage
+    crypto_whale_alerts: bool = True  # Monitor large transactions
+    crypto_on_chain_analysis: bool = True  # Use on-chain metrics
+    crypto_fear_greed_threshold: int = 25  # Buy when fear < X
+    crypto_24h_trading: bool = True  # Trade 24/7
+    
+    # =========================================================================
     # Aggressive trading settings
     # =========================================================================
     enable_scalping: bool = False  # Ultra short-term trades
@@ -151,6 +281,30 @@ class BotConfig:
             "futures_max_contracts": self.futures_max_contracts,
             "futures_use_micro": self.futures_use_micro,
             "futures_session": self.futures_session,
+            # Commodity
+            "commodity_type": self.commodity_type,
+            "commodity_trade_etfs": self.commodity_trade_etfs,
+            "commodity_trade_miners": self.commodity_trade_miners,
+            "commodity_trade_futures": self.commodity_trade_futures,
+            "commodity_seasonal_trading": self.commodity_seasonal_trading,
+            "commodity_macro_alerts": self.commodity_macro_alerts,
+            "commodity_geopolitical_alerts": self.commodity_geopolitical_alerts,
+            # Crypto
+            "crypto_category": self.crypto_category,
+            "crypto_exchange": self.crypto_exchange,
+            "crypto_trade_spot": self.crypto_trade_spot,
+            "crypto_trade_perpetuals": self.crypto_trade_perpetuals,
+            "crypto_trade_etfs": self.crypto_trade_etfs,
+            "crypto_use_leverage": self.crypto_use_leverage,
+            "crypto_leverage_max": self.crypto_leverage_max,
+            "crypto_dca_enabled": self.crypto_dca_enabled,
+            "crypto_dca_intervals": self.crypto_dca_intervals,
+            "crypto_trailing_stop_pct": self.crypto_trailing_stop_pct,
+            "crypto_take_profit_pct": self.crypto_take_profit_pct,
+            "crypto_whale_alerts": self.crypto_whale_alerts,
+            "crypto_on_chain_analysis": self.crypto_on_chain_analysis,
+            "crypto_fear_greed_threshold": self.crypto_fear_greed_threshold,
+            "crypto_24h_trading": self.crypto_24h_trading,
             # Aggressive
             "enable_scalping": self.enable_scalping,
             "scalp_profit_ticks": self.scalp_profit_ticks,
@@ -192,7 +346,7 @@ class BotInstance:
     - Run independently of other bots
     """
     
-    MAX_BOTS = 25  # Maximum number of bots allowed (stocks, options, futures, leveraged ETFs)
+    MAX_BOTS = 100  # Maximum number of bots allowed (stocks, options, futures, crypto, commodities)
     
     def __init__(self, config: BotConfig, bot_id: str = None):
         """

@@ -1,43 +1,12 @@
 import { useEffect, useRef, useState, useMemo } from 'react'
 import { createChart, ColorType, IChartApi, ISeriesApi, LineData, Time } from 'lightweight-charts'
+import { LineChart } from 'lucide-react'
 
 interface EquityChartProps {
   height?: number
 }
 
 type TimeRange = '1D' | '1W' | '1M' | '3M' | 'YTD' | 'ALL'
-
-// Generate sample equity curve data for the full year
-function generateFullEquityData(): LineData[] {
-  const data: LineData[] = []
-  const now = new Date()
-  const startOfYear = new Date(now.getFullYear(), 0, 1)
-  const startDate = new Date(startOfYear)
-  startDate.setDate(startDate.getDate() - 30) // Start 30 days before year start
-  
-  const totalDays = Math.ceil((now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
-  
-  let equity = 100000 // Starting equity
-  
-  for (let i = 0; i <= totalDays; i++) {
-    const date = new Date(startDate)
-    date.setDate(date.getDate() + i)
-    
-    // Simulate daily returns with slight upward bias
-    const volatility = 0.015 + Math.random() * 0.01 // 1.5-2.5% daily volatility
-    const trend = 0.0003 // Slight upward bias
-    const dailyReturn = (Math.random() - 0.48) * volatility + trend
-    equity = equity * (1 + dailyReturn)
-    
-    const dateStr = date.toISOString().split('T')[0]
-    data.push({
-      time: dateStr as Time,
-      value: Math.round(equity * 100) / 100,
-    })
-  }
-  
-  return data
-}
 
 function filterDataByRange(data: LineData[], range: TimeRange): LineData[] {
   if (data.length === 0) return data
@@ -78,8 +47,9 @@ export function EquityChart({ height = 280 }: EquityChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
   const seriesRef = useRef<ISeriesApi<'Area'> | null>(null)
-  const [fullData] = useState(() => generateFullEquityData())
+  const [fullData, setFullData] = useState<LineData[]>([])
   const [selectedRange, setSelectedRange] = useState<TimeRange>('3M')
+  const [loading, setLoading] = useState(true)
   
   // Filter data based on selected range
   const filteredData = useMemo(() => {
@@ -88,13 +58,42 @@ export function EquityChart({ height = 280 }: EquityChartProps) {
   
   // Calculate stats for filtered data
   const currentValue = filteredData[filteredData.length - 1]?.value || 0
-  const startValue = filteredData[0]?.value || 100000
-  const totalReturn = ((currentValue - startValue) / startValue) * 100
+  const startValue = filteredData[0]?.value || 0
+  const totalReturn = startValue > 0 ? ((currentValue - startValue) / startValue) * 100 : 0
   const isPositive = totalReturn >= 0
+  
+  // Check if we should show empty state
+  const showEmptyState = !loading && fullData.length === 0
+  
+  // Fetch equity data from API
+  useEffect(() => {
+    const fetchEquityData = async () => {
+      try {
+        const res = await fetch('/api/positions/equity-history')
+        if (res.ok) {
+          const data = await res.json()
+          if (data.history && data.history.length > 0) {
+            setFullData(data.history.map((d: any) => ({
+              time: d.date as Time,
+              value: d.value,
+            })))
+          }
+        }
+      } catch (e) {
+        console.error('Failed to fetch equity history:', e)
+      }
+      setLoading(false)
+    }
+    
+    fetchEquityData()
+  }, [])
 
   // Update chart when data or range changes
   useEffect(() => {
-    if (!chartContainerRef.current) return
+    // Don't create chart if no data or showing empty state
+    if (showEmptyState || !chartContainerRef.current || filteredData.length === 0) {
+      return
+    }
 
     // Clean up existing chart safely
     if (chartRef.current) {
@@ -191,7 +190,7 @@ export function EquityChart({ height = 280 }: EquityChartProps) {
         seriesRef.current = null
       }
     }
-  }, [filteredData, height, isPositive])
+  }, [filteredData, height, isPositive, showEmptyState])
 
   const handleRangeChange = (range: TimeRange) => {
     setSelectedRange(range)
@@ -207,6 +206,20 @@ export function EquityChart({ height = 280 }: EquityChartProps) {
       case 'YTD': return 'Year to Date'
       case 'ALL': return 'All Time'
     }
+  }
+
+  // Show empty state
+  if (showEmptyState) {
+    return (
+      <div 
+        className="flex flex-col items-center justify-center text-muted-foreground rounded-lg border border-dashed border-border bg-secondary/20"
+        style={{ height }}
+      >
+        <LineChart className="h-12 w-12 mb-3 opacity-30" />
+        <div className="text-sm font-medium">No Equity Data</div>
+        <div className="text-xs mt-1">Connect a broker to see your portfolio performance</div>
+      </div>
+    )
   }
 
   return (

@@ -112,6 +112,19 @@ class TradingViewWebhook:
         self._alerts: List[TradingViewAlert] = []
         self._alert_handlers: List[Callable] = []
     
+    async def connect(self) -> bool:
+        """Connect method for compatibility with BaseDataSource pattern."""
+        logger.info("TradingView webhook handler ready")
+        return True
+    
+    async def disconnect(self) -> None:
+        """Disconnect method for compatibility."""
+        pass
+    
+    async def process_alert(self, data: Dict[str, Any]) -> Optional[TradingViewAlert]:
+        """Alias for handle_webhook for compatibility."""
+        return await self.handle_webhook(data)
+    
     def add_handler(self, handler: Callable[[TradingViewAlert], None]) -> None:
         """Add an alert handler callback."""
         self._alert_handlers.append(handler)

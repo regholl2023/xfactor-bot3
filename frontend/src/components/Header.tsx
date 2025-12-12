@@ -1,65 +1,195 @@
 import { useState } from 'react'
-import { Pause, Power } from 'lucide-react'
+import { Pause, Power, Play, Lock, ShieldAlert, X } from 'lucide-react'
+import { TradingModeSelector } from './TradingModeSelector'
+import { useAuth } from '../context/AuthContext'
 
 interface HeaderProps {
   connected: boolean
 }
 
 export function Header({ connected }: HeaderProps) {
+  const { isAuthenticated, token } = useAuth()
   const [logoError, setLogoError] = useState(false)
+  const [showAuthModal, setShowAuthModal] = useState(false)
+  const [isPaused, setIsPaused] = useState(false)
+  const [actionLoading, setActionLoading] = useState<string | null>(null)
+
+  const handlePauseResume = async () => {
+    if (!isAuthenticated) {
+      setShowAuthModal(true)
+      return
+    }
+    
+    setActionLoading('pause')
+    try {
+      const endpoint = isPaused ? '/api/risk/resume' : '/api/risk/pause'
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.ok) {
+        setIsPaused(!isPaused)
+      }
+    } catch (e) {
+      console.error('Failed to pause/resume:', e)
+    }
+    setActionLoading(null)
+  }
+
+  const handleKillSwitch = async () => {
+    if (!isAuthenticated) {
+      setShowAuthModal(true)
+      return
+    }
+    
+    if (!confirm('⚠️ KILL SWITCH: This will immediately stop ALL trading activity and close pending orders. Are you sure?')) {
+      return
+    }
+    
+    setActionLoading('kill')
+    try {
+      const res = await fetch('/api/risk/kill-switch', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.ok) {
+        setIsPaused(true)
+      }
+    } catch (e) {
+      console.error('Failed to activate kill switch:', e)
+    }
+    setActionLoading(null)
+  }
 
   return (
-    <header className="border-b border-border bg-card px-6 py-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          {/* XFactor Bot Logo */}
-          {!logoError ? (
-            <img 
-              src="/assets/xfactor-logo.png" 
-              alt="XFactor Bot" 
-              className="h-12 w-auto"
-              onError={() => setLogoError(true)}
-            />
-          ) : (
-            <div className="h-12 w-12 bg-xfactor-slate rounded-lg flex items-center justify-center border border-xfactor-teal/30">
-              <span className="text-2xl font-bold text-xfactor-teal">X</span>
+    <>
+      <header className="border-b border-border bg-card px-6 py-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            {/* XFactor Bot Logo */}
+            {!logoError ? (
+              <img 
+                src="/assets/xfactor-logo.png" 
+                alt="XFactor Bot" 
+                className="h-12 w-auto"
+                onError={() => setLogoError(true)}
+              />
+            ) : (
+              <div className="h-12 w-12 bg-xfactor-slate rounded-lg flex items-center justify-center border border-xfactor-teal/30">
+                <span className="text-2xl font-bold text-xfactor-teal">X</span>
+              </div>
+            )}
+            <div className="flex flex-col">
+              <h1 className="text-lg font-bold xfactor-title tracking-wide">
+                THE XFACTOR BOT
+              </h1>
+              <span className="text-xs text-muted-foreground">
+                AI-Powered Trading System
+              </span>
             </div>
-          )}
-          <div className="flex flex-col">
-            <h1 className="text-lg font-bold xfactor-title tracking-wide">
-              THE XFACTOR BOT
-            </h1>
-            <span className="text-xs text-muted-foreground">
-              AI-Powered Trading System
-            </span>
-          </div>
-          <span className="rounded-full bg-xfactor-money/20 px-3 py-1 text-sm text-xfactor-money border border-xfactor-money/30">
-            Paper Mode
-          </span>
-        </div>
-        
-        <div className="flex items-center gap-6">
-          {/* Connection Status */}
-          <div className="flex items-center gap-2">
-            <div className={`h-2.5 w-2.5 rounded-full ${connected ? 'bg-profit money-glow' : 'bg-loss'}`} />
-            <span className="text-sm text-muted-foreground">
-              {connected ? 'Connected' : 'Disconnected'}
-            </span>
+            
+            {/* Trading Mode Selector */}
+            <TradingModeSelector />
           </div>
           
-          {/* Trading Controls */}
-          <div className="flex items-center gap-2">
-            <button className="flex items-center gap-2 rounded-lg bg-secondary px-4 py-2 text-sm hover:bg-secondary/80 border border-border transition-all hover:border-xfactor-teal">
-              <Pause className="h-4 w-4" />
-              Pause
-            </button>
-            <button className="flex items-center gap-2 rounded-lg bg-destructive px-4 py-2 text-sm text-destructive-foreground hover:bg-destructive/80 transition-all">
-              <Power className="h-4 w-4" />
-              Kill Switch
-            </button>
+          <div className="flex items-center gap-6">
+            {/* Connection Status */}
+            <div className="flex items-center gap-2">
+              <div className={`h-2.5 w-2.5 rounded-full ${connected ? 'bg-profit money-glow' : 'bg-loss'}`} />
+              <span className="text-sm text-muted-foreground">
+                {connected ? 'Connected' : 'Disconnected'}
+              </span>
+            </div>
+            
+            {/* Trading Controls */}
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={handlePauseResume}
+                disabled={actionLoading === 'pause'}
+                className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm border transition-all ${
+                  isPaused 
+                    ? 'bg-profit/20 text-profit border-profit/30 hover:bg-profit/30' 
+                    : 'bg-secondary border-border hover:bg-secondary/80 hover:border-xfactor-teal'
+                }`}
+              >
+                {isPaused ? (
+                  <>
+                    <Play className="h-4 w-4" />
+                    Resume
+                  </>
+                ) : (
+                  <>
+                    <Pause className="h-4 w-4" />
+                    Pause
+                  </>
+                )}
+              </button>
+              <button 
+                onClick={handleKillSwitch}
+                disabled={actionLoading === 'kill'}
+                className="flex items-center gap-2 rounded-lg bg-destructive px-4 py-2 text-sm text-destructive-foreground hover:bg-destructive/80 transition-all"
+              >
+                <Power className="h-4 w-4" />
+                Kill Switch
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-    </header>
+      </header>
+
+      {/* Auth Required Modal */}
+      {showAuthModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+          <div className="bg-card rounded-xl border border-amber-500/50 max-w-md w-full shadow-2xl shadow-amber-500/10 animate-in fade-in zoom-in duration-200">
+            {/* Modal Header */}
+            <div className="flex items-center gap-3 p-5 border-b border-border bg-gradient-to-r from-amber-500/10 to-orange-500/10 rounded-t-xl">
+              <div className="p-3 rounded-full bg-amber-500/20">
+                <ShieldAlert className="h-6 w-6 text-amber-500" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-foreground">Admin Access Required</h2>
+                <p className="text-sm text-muted-foreground">Authentication needed for trading controls</p>
+              </div>
+            </div>
+            
+            {/* Modal Body */}
+            <div className="p-5 space-y-4">
+              <div className="flex items-start gap-3 p-4 rounded-lg bg-amber-500/5 border border-amber-500/20">
+                <Lock className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" />
+                <div className="text-sm">
+                  <p className="text-foreground font-medium mb-1">
+                    Trading controls require admin privileges
+                  </p>
+                  <p className="text-muted-foreground">
+                    The <strong>Pause</strong>, <strong>Resume</strong>, and <strong>Kill Switch</strong> buttons 
+                    control live trading activity. To use these features, you must first unlock admin access.
+                  </p>
+                </div>
+              </div>
+              
+              <div className="text-sm text-muted-foreground">
+                <p className="font-medium text-foreground mb-2">How to unlock:</p>
+                <ol className="list-decimal list-inside space-y-1 ml-1">
+                  <li>Scroll down to the <strong>Admin Panel</strong> section</li>
+                  <li>Enter your admin password</li>
+                  <li>Click <strong>Login</strong></li>
+                  <li>Return here and try again</li>
+                </ol>
+              </div>
+            </div>
+            
+            {/* Modal Footer */}
+            <div className="flex justify-end gap-3 p-4 border-t border-border bg-secondary/30 rounded-b-xl">
+              <button
+                onClick={() => setShowAuthModal(false)}
+                className="px-4 py-2 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors"
+              >
+                Got it
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   )
 }

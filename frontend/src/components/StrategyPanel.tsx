@@ -321,7 +321,7 @@ export function StrategyPanel() {
                   {categoryToggles.length > 0 && (
                     <div className="space-y-2">
                       <div className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Strategies</div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      <div className="grid grid-cols-1 gap-2">
                         {categoryToggles.map(toggle => (
                           <div
                             key={toggle.id}
@@ -329,20 +329,20 @@ export function StrategyPanel() {
                               toggle.enabled ? 'border-xfactor-teal/50 bg-xfactor-teal/10' : 'border-border bg-secondary/50'
                             }`}
                           >
-                            <div className="flex items-center gap-2">
-                              <span className={toggle.enabled ? 'text-xfactor-teal' : 'text-muted-foreground'}>
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                              <span className={`flex-shrink-0 ${toggle.enabled ? 'text-xfactor-teal' : 'text-muted-foreground'}`}>
                                 {toggle.icon}
                               </span>
-                              <div>
-                                <div className={`text-sm ${toggle.enabled ? 'text-foreground' : 'text-muted-foreground'}`}>
+                              <div className="min-w-0">
+                                <div className={`text-sm truncate ${toggle.enabled ? 'text-foreground' : 'text-muted-foreground'}`}>
                                   {toggle.name}
                                 </div>
-                                <div className="text-xs text-muted-foreground">{toggle.description}</div>
+                                <div className="text-xs text-muted-foreground truncate">{toggle.description}</div>
                               </div>
                             </div>
                             <button
                               onClick={() => updateToggle(toggle.id, !toggle.enabled)}
-                              className={`h-5 w-10 rounded-full transition-colors ${
+                              className={`flex-shrink-0 h-5 w-10 rounded-full transition-colors ml-2 ${
                                 toggle.enabled ? 'bg-xfactor-teal' : 'bg-muted'
                               }`}
                             >
@@ -362,10 +362,10 @@ export function StrategyPanel() {
                   {categorySelects.length > 0 && (
                     <div className="space-y-2">
                       <div className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Options</div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 gap-3">
                         {categorySelects.map(select => (
                           <div key={select.id} className="space-y-1">
-                            <label className="text-sm font-medium">{select.name}</label>
+                            <label className="text-sm font-medium truncate">{select.name}</label>
                             <select
                               value={select.value}
                               onChange={(e) => updateSelect(select.id, e.target.value)}
@@ -375,7 +375,7 @@ export function StrategyPanel() {
                                 <option key={opt.value} value={opt.value}>{opt.label}</option>
                               ))}
                             </select>
-                            <div className="text-xs text-muted-foreground">{select.description}</div>
+                            <div className="text-xs text-muted-foreground truncate">{select.description}</div>
                           </div>
                         ))}
                       </div>
@@ -386,12 +386,12 @@ export function StrategyPanel() {
                   {categorySliders.length > 0 && (
                     <div className="space-y-2">
                       <div className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Parameters</div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 gap-3">
                         {categorySliders.map(slider => (
-                          <div key={slider.id} className="space-y-1">
-                            <div className="flex items-center justify-between">
-                              <label className="text-sm font-medium">{slider.name}</label>
-                              <span className="text-sm font-mono text-xfactor-teal">
+                          <div key={slider.id} className="space-y-1 p-2 rounded-lg bg-background/30">
+                            <div className="flex items-center justify-between gap-2">
+                              <label className="text-sm font-medium truncate">{slider.name}</label>
+                              <span className="text-sm font-mono text-xfactor-teal whitespace-nowrap">
                                 {formatValue(slider)}
                               </span>
                             </div>
@@ -406,7 +406,7 @@ export function StrategyPanel() {
                             />
                             <div className="flex justify-between text-xs text-muted-foreground">
                               <span>{slider.min}{slider.unit}</span>
-                              <span>{slider.description}</span>
+                              <span className="truncate px-1">{slider.description}</span>
                               <span>{slider.max}{slider.unit}</span>
                             </div>
                           </div>
@@ -422,22 +422,22 @@ export function StrategyPanel() {
       </div>
 
       {/* Summary Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-2 border-t border-border">
+      <div className="grid grid-cols-2 gap-2 pt-2 border-t border-border">
         <div className="text-center p-2 rounded-lg bg-secondary/50">
           <div className="text-lg font-bold text-xfactor-teal">{enabledCount}</div>
-          <div className="text-xs text-muted-foreground">Active Strategies</div>
+          <div className="text-xs text-muted-foreground">Active</div>
         </div>
         <div className="text-center p-2 rounded-lg bg-secondary/50">
           <div className="text-lg font-bold text-profit">{sliders.length}</div>
-          <div className="text-xs text-muted-foreground">Parameters</div>
+          <div className="text-xs text-muted-foreground">Params</div>
         </div>
         <div className="text-center p-2 rounded-lg bg-secondary/50">
           <div className="text-lg font-bold text-yellow-400">{selects.length}</div>
-          <div className="text-xs text-muted-foreground">Configurable Options</div>
+          <div className="text-xs text-muted-foreground">Options</div>
         </div>
         <div className="text-center p-2 rounded-lg bg-secondary/50">
           <div className="text-lg font-bold text-purple-400">6</div>
-          <div className="text-xs text-muted-foreground">AI Models Available</div>
+          <div className="text-xs text-muted-foreground">AI Models</div>
         </div>
       </div>
     </div>

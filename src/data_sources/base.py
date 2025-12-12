@@ -85,6 +85,53 @@ class Bar:
         return self.close > self.open
 
 
+@dataclass
+class NewsArticle:
+    """News article data."""
+    title: str
+    summary: str
+    source: str
+    url: str
+    published: datetime
+    symbols: List[str] = field(default_factory=list)
+    sentiment: float = 0.0  # -1 to 1
+    relevance: float = 0.0  # 0 to 1
+    author: str = ""
+    image_url: str = ""
+    
+
+@dataclass
+class TradingSignal:
+    """Trading signal from analysis."""
+    symbol: str
+    signal_type: str  # 'buy', 'sell', 'hold'
+    strength: float  # 0 to 1
+    source: str
+    price: float
+    target_price: Optional[float] = None
+    stop_loss: Optional[float] = None
+    timestamp: datetime = field(default_factory=datetime.now)
+    confidence: float = 0.5
+    timeframe: str = "1d"
+    reasoning: str = ""
+
+
+@dataclass
+class InsiderTrade:
+    """Insider trading activity."""
+    symbol: str
+    insider_name: str
+    title: str  # CEO, CFO, Director, etc.
+    transaction_type: str  # 'buy', 'sell', 'gift', 'exercise'
+    shares: int
+    price: float
+    value: float
+    shares_owned_after: int
+    filing_date: datetime
+    transaction_date: datetime
+    source: str = "SEC"
+
+
 class BaseDataSource(ABC):
     """
     Abstract base class for market data sources.

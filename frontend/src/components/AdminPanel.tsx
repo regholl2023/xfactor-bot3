@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
-import { Lock, Unlock, Power, AlertTriangle, Check, X, Eye, EyeOff, Bot } from 'lucide-react'
+import { Lock, Unlock, Power, AlertTriangle, Check, X, Eye, EyeOff, Bot, Building2 } from 'lucide-react'
 import { BotManager } from './BotManager'
+import { BrokerConfig } from './BrokerConfig'
 import { useAuth } from '../context/AuthContext'
 
 interface Feature {
@@ -21,7 +22,7 @@ export function AdminPanel() {
   const [error, setError] = useState('')
   const [features, setFeatures] = useState<GroupedFeatures>({})
   const [loading, setLoading] = useState(false)
-  const [activeTab, setActiveTab] = useState<'features' | 'bots'>('features')
+  const [activeTab, setActiveTab] = useState<'features' | 'bots' | 'broker'>('broker')
 
   // Fetch features when authenticated
   useEffect(() => {
@@ -199,14 +200,15 @@ export function AdminPanel() {
       {/* Tab Selector */}
       <div className="flex gap-2 mb-4">
         <button
-          onClick={() => setActiveTab('features')}
-          className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
-            activeTab === 'features'
+          onClick={() => setActiveTab('broker')}
+          className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+            activeTab === 'broker'
               ? 'bg-primary text-primary-foreground'
               : 'bg-secondary text-muted-foreground hover:text-foreground'
           }`}
         >
-          Features
+          <Building2 className="h-4 w-4" />
+          Broker
         </button>
         <button
           onClick={() => setActiveTab('bots')}
@@ -219,7 +221,22 @@ export function AdminPanel() {
           <Bot className="h-4 w-4" />
           Bots
         </button>
+        <button
+          onClick={() => setActiveTab('features')}
+          className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
+            activeTab === 'features'
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-secondary text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          Features
+        </button>
       </div>
+      
+      {/* Broker Config Tab */}
+      {activeTab === 'broker' && (
+        <BrokerConfig />
+      )}
       
       {/* Bot Manager Tab */}
       {activeTab === 'bots' && (

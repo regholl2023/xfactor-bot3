@@ -1,8 +1,10 @@
 import { useState, useEffect, useMemo } from 'react'
 import { 
-  Bot, Play, Pause, Square, Plus, Trash2, Settings, 
-  Activity, AlertTriangle, ChevronDown, ChevronUp,
-  Search, SortAsc, SortDesc, X, Filter, RefreshCw
+  Bot, Play, Pause, Square, Plus, Trash2,
+  ChevronDown, ChevronUp,
+  Search, SortAsc, SortDesc, X, RefreshCw,
+  Activity, TrendingUp, TrendingDown, Clock, AlertCircle, Target, BarChart3,
+  Lock, ShieldAlert
 } from 'lucide-react'
 
 interface BotSummary {
@@ -23,6 +25,10 @@ interface BotDetails {
   name: string
   description: string
   status: string
+  created_at?: string
+  started_at?: string
+  stopped_at?: string
+  uptime_seconds?: number
   config: {
     symbols: string[]
     strategies: string[]
@@ -30,13 +36,18 @@ interface BotDetails {
     max_positions: number
     max_daily_loss_pct: number
     trade_frequency_seconds: number
+    instrument_type?: string
+    enable_news_trading?: boolean
   }
   stats: {
     trades_today: number
     signals_generated: number
     daily_pnl: number
+    total_pnl?: number
+    win_rate?: number
     open_positions: number
     errors_count: number
+    uptime_seconds?: number
   }
 }
 
@@ -47,10 +58,12 @@ interface BotManagerProps {
 export function BotManager({ token = '' }: BotManagerProps) {
   const [bots, setBots] = useState<BotSummary[]>([])
   const [selectedBot, setSelectedBot] = useState<BotDetails | null>(null)
+  const [showBotDetail, setShowBotDetail] = useState(false)
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [expandedBot, setExpandedBot] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [showAuthModal, setShowAuthModal] = useState(false)
   
   // Search, Sort, Filter state
   const [searchQuery, setSearchQuery] = useState('')
@@ -182,6 +195,12 @@ export function BotManager({ token = '' }: BotManagerProps) {
         }),
       })
       
+      if (response.status === 401) {
+        setShowAuthModal(true)
+        setLoading(false)
+        return
+      }
+      
       if (response.ok) {
         const data = await response.json()
         if (data.ai_interpretation) {
@@ -204,13 +223,52 @@ export function BotManager({ token = '' }: BotManagerProps) {
 
   const controlBot = async (botId: string, action: string) => {
     try {
-      await fetch(`/api/bots/${botId}/${action}`, {
+      const response = await fetch(`/api/bots/${botId}/${action}`, {
         method: 'POST',
         headers: authHeaders,
       })
+      
+      if (response.status === 401) {
+        setShowAuthModal(true)
+        return
+      }
+      
+      if (!response.ok) {
+        const data = await response.json()
+        setError(data.detail || `Failed to ${action} bot`)
+        return
+      }
+      
       fetchBots()
+      // Refresh selected bot if it's the one being controlled
+      if (selectedBot?.id === botId) {
+        fetchBotDetails(botId)
+      }
     } catch (e) {
       setError(`Failed to ${action} bot`)
+    }
+  }
+
+  const fetchBotDetails = async (botId: string) => {
+    try {
+      const response = await fetch(`/api/bots/${botId}`, {
+        headers: authHeaders,
+      })
+      
+      if (response.status === 401) {
+        setShowAuthModal(true)
+        return
+      }
+      
+      if (response.ok) {
+        const data = await response.json()
+        setSelectedBot(data)
+        setShowBotDetail(true)
+      } else {
+        setError('Failed to fetch bot details')
+      }
+    } catch (e) {
+      setError('Failed to fetch bot details')
     }
   }
 
@@ -218,10 +276,16 @@ export function BotManager({ token = '' }: BotManagerProps) {
     if (!confirm('Are you sure you want to delete this bot?')) return
     
     try {
-      await fetch(`/api/bots/${botId}`, {
+      const response = await fetch(`/api/bots/${botId}`, {
         method: 'DELETE',
         headers: authHeaders,
       })
+      
+      if (response.status === 401) {
+        setShowAuthModal(true)
+        return
+      }
+      
       fetchBots()
     } catch (e) {
       setError('Failed to delete bot')
@@ -230,10 +294,16 @@ export function BotManager({ token = '' }: BotManagerProps) {
 
   const controlAllBots = async (action: string) => {
     try {
-      await fetch(`/api/bots/${action}`, {
+      const response = await fetch(`/api/bots/${action}`, {
         method: 'POST',
         headers: authHeaders,
       })
+      
+      if (response.status === 401) {
+        setShowAuthModal(true)
+        return
+      }
+      
       fetchBots()
     } catch (e) {
       setError(`Failed to ${action}`)
@@ -264,7 +334,7 @@ export function BotManager({ token = '' }: BotManagerProps) {
           <Bot className="h-5 w-5 text-primary" />
           <h2 className="text-lg font-semibold">Bot Manager</h2>
           <span className="text-sm text-muted-foreground">
-            ({filteredBots.length}/{bots.length} shown, max 25)
+            ({filteredBots.length}/{bots.length} shown, max 100)
           </span>
         </div>
         
@@ -402,7 +472,12 @@ export function BotManager({ token = '' }: BotManagerProps) {
               <div className="flex items-center gap-3">
                 <div className={`h-2 w-2 rounded-full ${getStatusColor(bot.status)}`} />
                 <div>
-                  <span className="font-medium text-sm">{bot.name}</span>
+                  <button 
+                    onClick={() => fetchBotDetails(bot.id)}
+                    className="font-medium text-sm hover:text-primary hover:underline text-left"
+                  >
+                    {bot.name}
+                  </button>
                   <span className="text-xs text-muted-foreground ml-2">({bot.id})</span>
                 </div>
               </div>
@@ -710,12 +785,251 @@ export function BotManager({ token = '' }: BotManagerProps) {
       ) : (
         <button
           onClick={() => setShowCreateForm(true)}
-          disabled={bots.length >= 25}
+          disabled={bots.length >= 100}
           className="mt-4 w-full flex items-center justify-center gap-2 rounded-lg border border-dashed border-border py-2 text-sm text-muted-foreground hover:border-primary hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Plus className="h-4 w-4" />
           Add New Bot
         </button>
+      )}
+      
+      {/* Bot Detail Modal */}
+      {showBotDetail && selectedBot && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-card rounded-xl border border-border max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-4 border-b border-border sticky top-0 bg-card">
+              <div className="flex items-center gap-3">
+                <div className={`h-3 w-3 rounded-full ${getStatusColor(selectedBot.status)}`} />
+                <div>
+                  <h2 className="text-lg font-bold">{selectedBot.name}</h2>
+                  <p className="text-xs text-muted-foreground">{selectedBot.description || `Bot ID: ${selectedBot.id}`}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowBotDetail(false)}
+                className="p-2 rounded hover:bg-secondary"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            {/* Bot Stats */}
+            <div className="p-4 space-y-4">
+              {/* Status & Controls */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className={`px-2 py-1 rounded text-xs font-medium ${
+                    selectedBot.status === 'running' ? 'bg-profit/20 text-profit' :
+                    selectedBot.status === 'paused' ? 'bg-yellow-500/20 text-yellow-500' :
+                    selectedBot.status === 'error' ? 'bg-loss/20 text-loss' :
+                    'bg-muted text-muted-foreground'
+                  }`}>
+                    {selectedBot.status.toUpperCase()}
+                  </span>
+                  {selectedBot.status === 'running' && (
+                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Activity className="h-3 w-3 animate-pulse" />
+                      Live
+                    </span>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  {selectedBot.status === 'running' ? (
+                    <>
+                      <button
+                        onClick={() => controlBot(selectedBot.id, 'pause')}
+                        className="px-3 py-1 rounded bg-yellow-500/20 text-yellow-500 text-sm"
+                      >
+                        <Pause className="h-4 w-4 inline mr-1" />
+                        Pause
+                      </button>
+                      <button
+                        onClick={() => controlBot(selectedBot.id, 'stop')}
+                        className="px-3 py-1 rounded bg-loss/20 text-loss text-sm"
+                      >
+                        <Square className="h-4 w-4 inline mr-1" />
+                        Stop
+                      </button>
+                    </>
+                  ) : selectedBot.status === 'paused' ? (
+                    <button
+                      onClick={() => controlBot(selectedBot.id, 'resume')}
+                      className="px-3 py-1 rounded bg-profit/20 text-profit text-sm"
+                    >
+                      <Play className="h-4 w-4 inline mr-1" />
+                      Resume
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => controlBot(selectedBot.id, 'start')}
+                      className="px-3 py-1 rounded bg-profit/20 text-profit text-sm"
+                    >
+                      <Play className="h-4 w-4 inline mr-1" />
+                      Start
+                    </button>
+                  )}
+                </div>
+              </div>
+              
+              {/* Performance Stats */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="bg-background/50 rounded-lg p-3">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                    <TrendingUp className="h-3 w-3" />
+                    Daily P&L
+                  </div>
+                  <div className={`text-lg font-bold ${selectedBot.stats.daily_pnl >= 0 ? 'text-profit' : 'text-loss'}`}>
+                    {selectedBot.stats.daily_pnl >= 0 ? '+' : ''}${selectedBot.stats.daily_pnl.toFixed(2)}
+                  </div>
+                </div>
+                <div className="bg-background/50 rounded-lg p-3">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                    <BarChart3 className="h-3 w-3" />
+                    Trades Today
+                  </div>
+                  <div className="text-lg font-bold">{selectedBot.stats.trades_today}</div>
+                </div>
+                <div className="bg-background/50 rounded-lg p-3">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                    <Target className="h-3 w-3" />
+                    Win Rate
+                  </div>
+                  <div className="text-lg font-bold">
+                    {selectedBot.stats.win_rate ? `${(selectedBot.stats.win_rate * 100).toFixed(1)}%` : 'N/A'}
+                  </div>
+                </div>
+                <div className="bg-background/50 rounded-lg p-3">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                    <Clock className="h-3 w-3" />
+                    Uptime
+                  </div>
+                  <div className="text-lg font-bold">{formatUptime(selectedBot.stats.uptime_seconds || 0)}</div>
+                </div>
+              </div>
+              
+              {/* Additional Stats */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="bg-background/50 rounded-lg p-3 text-center">
+                  <div className="text-2xl font-bold">{selectedBot.stats.signals_generated || 0}</div>
+                  <div className="text-xs text-muted-foreground">Signals</div>
+                </div>
+                <div className="bg-background/50 rounded-lg p-3 text-center">
+                  <div className="text-2xl font-bold">{selectedBot.stats.open_positions || 0}</div>
+                  <div className="text-xs text-muted-foreground">Open Positions</div>
+                </div>
+                <div className="bg-background/50 rounded-lg p-3 text-center">
+                  <div className="text-2xl font-bold text-loss">{selectedBot.stats.errors_count || 0}</div>
+                  <div className="text-xs text-muted-foreground">Errors</div>
+                </div>
+              </div>
+              
+              {/* Configuration */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-medium flex items-center gap-2">
+                  <Bot className="h-4 w-4" />
+                  Configuration
+                </h3>
+                
+                <div className="bg-background/50 rounded-lg p-3 space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Symbols</span>
+                    <span className="font-mono text-xs">
+                      {selectedBot.config.symbols?.join(', ') || 'None'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Strategies</span>
+                    <span className="font-mono text-xs">
+                      {selectedBot.config.strategies?.slice(0, 3).join(', ')}
+                      {(selectedBot.config.strategies?.length || 0) > 3 && ` +${selectedBot.config.strategies!.length - 3} more`}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Max Position Size</span>
+                    <span>${selectedBot.config.max_position_size?.toLocaleString() || 'N/A'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Max Positions</span>
+                    <span>{selectedBot.config.max_positions || 'N/A'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Max Daily Loss</span>
+                    <span>{selectedBot.config.max_daily_loss_pct || 0}%</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Trade Frequency</span>
+                    <span>Every {selectedBot.config.trade_frequency_seconds || 60}s</span>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Timestamps */}
+              <div className="text-xs text-muted-foreground space-y-1 pt-2 border-t border-border">
+                <div>Created: {selectedBot.created_at ? new Date(selectedBot.created_at).toLocaleString() : 'N/A'}</div>
+                {selectedBot.started_at && <div>Started: {new Date(selectedBot.started_at).toLocaleString()}</div>}
+                {selectedBot.stopped_at && <div>Stopped: {new Date(selectedBot.stopped_at).toLocaleString()}</div>}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Auth Required Modal */}
+      {showAuthModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+          <div className="bg-card rounded-xl border border-amber-500/50 max-w-md w-full shadow-2xl shadow-amber-500/10 animate-in fade-in zoom-in duration-200">
+            {/* Modal Header */}
+            <div className="flex items-center gap-3 p-5 border-b border-border bg-gradient-to-r from-amber-500/10 to-orange-500/10 rounded-t-xl">
+              <div className="p-3 rounded-full bg-amber-500/20">
+                <ShieldAlert className="h-6 w-6 text-amber-500" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-foreground">Admin Access Required</h2>
+                <p className="text-sm text-muted-foreground">Authentication needed to continue</p>
+              </div>
+            </div>
+            
+            {/* Modal Body */}
+            <div className="p-5 space-y-4">
+              <div className="flex items-start gap-3 p-4 rounded-lg bg-amber-500/5 border border-amber-500/20">
+                <Lock className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" />
+                <div className="text-sm">
+                  <p className="text-foreground font-medium mb-1">
+                    This action requires admin privileges
+                  </p>
+                  <p className="text-muted-foreground">
+                    To start, stop, pause, create, or delete bots, you must first unlock admin access using the 
+                    <span className="inline-flex items-center gap-1 mx-1 px-2 py-0.5 rounded bg-secondary text-foreground font-mono text-xs">
+                      <Lock className="h-3 w-3" /> Admin
+                    </span>
+                    button in the header.
+                  </p>
+                </div>
+              </div>
+              
+              <div className="text-sm text-muted-foreground">
+                <p className="font-medium text-foreground mb-2">How to unlock:</p>
+                <ol className="list-decimal list-inside space-y-1 ml-1">
+                  <li>Click the <strong>Admin</strong> lock icon in the top navigation</li>
+                  <li>Enter your admin password</li>
+                  <li>The lock will turn green when unlocked</li>
+                  <li>Try your action again</li>
+                </ol>
+              </div>
+            </div>
+            
+            {/* Modal Footer */}
+            <div className="flex justify-end gap-3 p-4 border-t border-border bg-secondary/30 rounded-b-xl">
+              <button
+                onClick={() => setShowAuthModal(false)}
+                className="px-4 py-2 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors"
+              >
+                Got it
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
