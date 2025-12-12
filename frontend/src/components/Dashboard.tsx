@@ -5,6 +5,8 @@ import { StrategyPanel } from './StrategyPanel'
 import { NewsFeed } from './NewsFeed'
 import { RiskControls } from './RiskControls'
 import { AdminPanel } from './AdminPanel'
+import { EquityChart } from './EquityChart'
+import { BotManager } from './BotManager'
 
 export function Dashboard() {
   const [portfolioData, setPortfolioData] = useState({
@@ -45,10 +47,10 @@ export function Dashboard() {
         <div className="col-span-2 space-y-6">
           <div className="rounded-lg border border-border bg-card p-4">
             <h2 className="mb-4 text-lg font-semibold">Equity Curve</h2>
-            <div className="h-64 flex items-center justify-center text-muted-foreground">
-              [TradingView Chart Component]
-            </div>
+            <EquityChart height={240} />
           </div>
+          
+          <BotManager />
           
           <PositionsTable />
         </div>
