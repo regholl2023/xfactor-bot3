@@ -108,6 +108,15 @@ class Settings(BaseSettings):
     # Barchart OnDemand
     barchart_api_key: str = Field(default="", description="Barchart OnDemand API key")
     
+    # AInvest AI
+    ainvest_api_key: str = Field(default="", description="AInvest AI-powered analysis API key")
+    
+    # Finviz
+    finviz_api_key: str = Field(default="", description="Finviz Elite API key")
+    
+    # OpenInsider (scraping-based, no API key needed)
+    openinsider_enabled: bool = Field(default=True, description="Enable OpenInsider scraping")
+    
     # Polygon.io
     polygon_api_key: str = Field(default="", description="Polygon.io API key")
     

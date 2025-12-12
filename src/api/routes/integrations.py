@@ -387,3 +387,196 @@ async def get_tradingview_alerts(
         ]
     }
 
+
+# =========================================================================
+# AInvest AI Routes
+# =========================================================================
+
+@router.get("/ainvest/recommendations")
+async def get_ainvest_recommendations(
+    symbols: Optional[str] = None,
+    min_score: float = 0,
+    limit: int = 100
+) -> Dict[str, Any]:
+    """
+    Get AI-powered stock recommendations from AInvest.
+    
+    Args:
+        symbols: Comma-separated list of ticker symbols (optional)
+        min_score: Minimum AI score (0-100)
+        limit: Maximum number of recommendations (max 100)
+    """
+    from src.data_sources.ainvest import AInvestDataSource
+    
+    ainvest = AInvestDataSource()
+    await ainvest.connect()
+    
+    symbol_list = symbols.split(",") if symbols else None
+    recommendations = await ainvest.get_ai_recommendations(
+        symbols=symbol_list,
+        min_score=min_score,
+        limit=min(limit, 100)
+    )
+    
+    return {
+        "count": len(recommendations),
+        "recommendations": [
+            {
+                "symbol": r.symbol,
+                "company": r.company,
+                "ai_score": r.ai_score,
+                "recommendation": r.recommendation,
+                "target_price": r.target_price,
+                "current_price": r.current_price,
+                "upside_pct": r.upside_pct,
+                "signals": r.signals,
+                "confidence": r.confidence,
+                "analysis_date": r.analysis_date.isoformat(),
+            }
+            for r in recommendations
+        ]
+    }
+
+
+@router.get("/ainvest/sentiment/{symbol}")
+async def get_ainvest_sentiment(symbol: str) -> Dict[str, Any]:
+    """Get AI sentiment analysis for a stock."""
+    from src.data_sources.ainvest import AInvestDataSource
+    
+    ainvest = AInvestDataSource()
+    await ainvest.connect()
+    
+    sentiment = await ainvest.get_sentiment(symbol.upper())
+    
+    if sentiment:
+        return {
+            "symbol": sentiment.symbol,
+            "overall_sentiment": sentiment.overall_sentiment,
+            "news_sentiment": sentiment.news_sentiment,
+            "social_sentiment": sentiment.social_sentiment,
+            "analyst_sentiment": sentiment.analyst_sentiment,
+            "volume_sentiment": sentiment.volume_sentiment,
+            "last_updated": sentiment.last_updated.isoformat(),
+        }
+    else:
+        raise HTTPException(404, f"No sentiment data for {symbol}")
+
+
+@router.get("/ainvest/signals")
+async def get_ainvest_signals(
+    signal_type: Optional[str] = None,
+    limit: int = 100
+) -> Dict[str, Any]:
+    """Get AI-generated trading signals from AInvest."""
+    from src.data_sources.ainvest import AInvestDataSource
+    
+    ainvest = AInvestDataSource()
+    await ainvest.connect()
+    
+    signals = await ainvest.get_trading_signals(
+        signal_type=signal_type,
+        limit=min(limit, 100)
+    )
+    
+    return {
+        "count": len(signals),
+        "signals": [
+            {
+                "source": s.source,
+                "signal_type": s.signal_type,
+                "symbol": s.symbol,
+                "timestamp": s.timestamp.isoformat(),
+                "details": s.details,
+            }
+            for s in signals
+        ]
+    }
+
+
+@router.get("/ainvest/insider-trades")
+async def get_ainvest_insider_trades(limit: int = 100) -> Dict[str, Any]:
+    """Get insider trading data via AInvest."""
+    from src.data_sources.ainvest import AInvestDataSource
+    
+    ainvest = AInvestDataSource()
+    await ainvest.connect()
+    
+    trades = await ainvest.get_insider_trades(limit=min(limit, 100))
+    
+    return {
+        "count": len(trades),
+        "trades": [
+            {
+                "ticker": t.ticker,
+                "insider_name": t.insider_name,
+                "relation": t.relation,
+                "trade_type": t.trade_type,
+                "value": t.value,
+                "shares": t.shares,
+                "trade_date": t.trade_date.isoformat(),
+                "filing_date": t.filing_date.isoformat(),
+            }
+            for t in trades
+        ]
+    }
+
+
+@router.get("/ainvest/earnings")
+async def get_ainvest_earnings(
+    days: int = 30,
+    limit: int = 100
+) -> Dict[str, Any]:
+    """Get upcoming earnings calendar from AInvest."""
+    from src.data_sources.ainvest import AInvestDataSource
+    from datetime import datetime, timedelta
+    
+    ainvest = AInvestDataSource()
+    await ainvest.connect()
+    
+    start_date = datetime.now()
+    end_date = start_date + timedelta(days=days)
+    
+    earnings = await ainvest.get_earnings_calendar(
+        start_date=start_date,
+        end_date=end_date,
+        limit=min(limit, 100)
+    )
+    
+    return {
+        "count": len(earnings),
+        "earnings": earnings
+    }
+
+
+@router.get("/ainvest/news")
+async def get_ainvest_news(
+    symbols: Optional[str] = None,
+    limit: int = 100
+) -> Dict[str, Any]:
+    """Get news articles from AInvest."""
+    from src.data_sources.ainvest import AInvestDataSource
+    
+    ainvest = AInvestDataSource()
+    await ainvest.connect()
+    
+    symbol_list = symbols.split(",") if symbols else None
+    news = await ainvest.get_news(
+        symbols=symbol_list,
+        limit=min(limit, 100)
+    )
+    
+    return {
+        "count": len(news),
+        "articles": [
+            {
+                "title": n.title,
+                "url": n.url,
+                "source": n.source,
+                "published_at": n.published_at.isoformat(),
+                "sentiment": n.sentiment,
+                "symbols": n.symbols,
+            }
+            for n in news
+        ]
+    }
+
