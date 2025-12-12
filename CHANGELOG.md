@@ -5,6 +5,38 @@ All notable changes to the XFactor Bot project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0] - 2024-12-12
+
+### Added
+- **Desktop Application (Tauri)**: Native desktop app for macOS, Windows, and Linux
+  - Built with Tauri 2.0 for lightweight, secure native experience
+  - macOS: Apple Silicon (ARM64) and Intel (x64) support
+  - Windows: x64 builds (.exe, .msi installers)
+  - Linux: x64 builds (.deb, .AppImage)
+  - System tray integration with quick actions
+  - Native menus with keyboard shortcuts
+  - Auto-update capability
+  - Single instance enforcement
+
+- **Multiple Broker Authentication Methods**: Easier connection for all user levels
+  - **OAuth Login**: Schwab, Tradier - "Login with" button for secure browser auth
+  - **Username/Password**: Robinhood, Webull (Beta) - Familiar login with 2FA support
+  - **API Keys**: Alpaca - Standard API key authentication
+  - **TWS Gateway**: IBKR - Professional trading platform integration
+  - Visual auth type indicators in broker selection
+  - Beta badges for unofficial API integrations
+
+- **Cross-Platform CI/CD**: Automated desktop builds
+  - GitLab CI pipeline for all platforms
+  - GitHub Actions workflow for GitHub users
+  - Artifact publishing for releases
+  - Manual trigger support for on-demand builds
+
+### Changed
+- Desktop app automatically connects to localhost:9876 backend
+- Fetch API patched for Tauri environment
+- WebSocket URL detection for desktop vs browser
+
 ## [0.8.0] - 2024-12-12
 
 ### Added

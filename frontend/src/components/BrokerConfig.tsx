@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { 
   Settings, CheckCircle, XCircle, RefreshCw, Eye, EyeOff,
   Building2, Wallet, TrendingUp, Clock, ExternalLink, AlertTriangle,
-  DollarSign, CreditCard
+  DollarSign, CreditCard, User, Key, LogIn, Smartphone
 } from 'lucide-react'
 import { useTradingMode } from '../context/TradingModeContext'
 
@@ -23,6 +23,13 @@ interface BrokerFormData {
   // Futures settings
   futuresMarginType: 'intraday' | 'overnight'
   futuresContracts: string[]
+  // Credentials-based auth (Robinhood, Webull)
+  username: string
+  password: string
+  twoFactorCode: string
+  // API key auth (Alpaca)
+  apiKey: string
+  apiSecret: string
 }
 
 export function BrokerConfig() {
@@ -47,7 +54,16 @@ export function BrokerConfig() {
     optionsBuyingPower: '',
     futuresMarginType: 'overnight',
     futuresContracts: [],
+    // Credentials
+    username: '',
+    password: '',
+    twoFactorCode: '',
+    // API keys
+    apiKey: '',
+    apiSecret: '',
   })
+  
+  const [oauthLoading, setOauthLoading] = useState(false)
   
   const [showAdvanced, setShowAdvanced] = useState(false)
 
@@ -60,6 +76,8 @@ export function BrokerConfig() {
       features: ['Stocks', 'Options', 'Futures', 'Crypto', 'Forex'],
       minDeposit: '$0 (Paper) / $100 (Live)',
       paperInfo: '$1,000,000 simulated cash for paper trading',
+      authType: 'tws' as const,  // Login via TWS/Gateway app
+      authDescription: 'Login to TWS or IB Gateway, then connect',
     },
     { 
       id: 'alpaca', 
@@ -69,6 +87,8 @@ export function BrokerConfig() {
       features: ['Stocks', 'Crypto', 'Paper Trading'],
       minDeposit: '$0 (Paper) / $1 (Live)',
       paperInfo: '$100,000 simulated cash for paper trading',
+      authType: 'apikey' as const,
+      authDescription: 'Requires API keys from Alpaca dashboard',
     },
     { 
       id: 'schwab', 
@@ -77,7 +97,8 @@ export function BrokerConfig() {
       description: 'Full-service brokerage with Thinkorswim platform',
       features: ['Stocks', 'Options', 'Futures', 'ETFs'],
       minDeposit: '$0',
-      comingSoon: true,
+      authType: 'oauth' as const,  // OAuth login flow
+      authDescription: 'Login with your Schwab username & password',
     },
     { 
       id: 'tradier', 
@@ -86,7 +107,30 @@ export function BrokerConfig() {
       description: 'API-first brokerage for active traders',
       features: ['Stocks', 'Options', 'ETFs'],
       minDeposit: '$0',
-      comingSoon: true,
+      authType: 'oauth' as const,
+      authDescription: 'Login with your Tradier account',
+    },
+    { 
+      id: 'robinhood', 
+      name: 'Robinhood', 
+      logo: '🪶',
+      description: 'Commission-free trading for beginners',
+      features: ['Stocks', 'Options', 'Crypto'],
+      minDeposit: '$0',
+      authType: 'credentials' as const,  // Username/password + 2FA
+      authDescription: 'Login with username, password & 2FA',
+      beta: true,
+    },
+    { 
+      id: 'webull', 
+      name: 'Webull', 
+      logo: '🐂',
+      description: 'Advanced trading with extended hours',
+      features: ['Stocks', 'Options', 'Crypto', 'ETFs'],
+      minDeposit: '$0',
+      authType: 'credentials' as const,
+      authDescription: 'Login with email/phone & password',
+      beta: true,
     },
   ]
   
@@ -99,6 +143,131 @@ export function BrokerConfig() {
     })
   }
 
+  // Get the current broker's auth type
+  const getCurrentBrokerAuthType = () => {
+    const broker = brokers.find(b => b.id === selectedBroker)
+    return broker?.authType || 'apikey'
+  }
+
+  // Handle OAuth login (Schwab, Tradier)
+  const handleOAuthLogin = async () => {
+    setOauthLoading(true)
+    setError('')
+    
+    try {
+      // Request OAuth URL from backend
+      const res = await fetch(`/api/integrations/broker/${selectedBroker}/oauth/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paper_trading: formData.usePaper }),
+      })
+      
+      if (res.ok) {
+        const data = await res.json()
+        // Open OAuth login in new window
+        const authWindow = window.open(data.auth_url, 'broker_oauth', 'width=600,height=700')
+        
+        // Listen for OAuth callback
+        const handleMessage = async (event: MessageEvent) => {
+          if (event.data?.type === 'oauth_callback' && event.data?.broker === selectedBroker) {
+            window.removeEventListener('message', handleMessage)
+            authWindow?.close()
+            
+            // Complete the connection
+            const success = await connectBroker(selectedBroker, {
+              oauth_code: event.data.code,
+              paper_trading: formData.usePaper,
+            })
+            
+            if (success) {
+              setShowConfig(false)
+            } else {
+              setError('Failed to complete login. Please try again.')
+            }
+            setOauthLoading(false)
+          }
+        }
+        window.addEventListener('message', handleMessage)
+        
+        // Timeout after 5 minutes
+        setTimeout(() => {
+          window.removeEventListener('message', handleMessage)
+          setOauthLoading(false)
+        }, 300000)
+      } else {
+        setError('Failed to start login. Please try again.')
+        setOauthLoading(false)
+      }
+    } catch (e) {
+      setError('Connection error. Please try again.')
+      setOauthLoading(false)
+    }
+  }
+
+  // Handle credentials login (Robinhood, Webull)
+  const handleCredentialsLogin = async () => {
+    setConnecting(true)
+    setError('')
+    
+    if (!formData.username || !formData.password) {
+      setError('Please enter your username and password.')
+      setConnecting(false)
+      return
+    }
+    
+    try {
+      const success = await connectBroker(selectedBroker, {
+        username: formData.username,
+        password: formData.password,
+        two_factor_code: formData.twoFactorCode || undefined,
+        paper_trading: formData.usePaper,
+      })
+      
+      if (success) {
+        setShowConfig(false)
+        // Clear sensitive data
+        setFormData(prev => ({ ...prev, password: '', twoFactorCode: '' }))
+      } else {
+        setError('Login failed. Check your credentials or 2FA code.')
+      }
+    } catch (e) {
+      setError('Connection error. Please try again.')
+    }
+    
+    setConnecting(false)
+  }
+
+  // Handle API key connection (Alpaca)
+  const handleApiKeyConnect = async () => {
+    setConnecting(true)
+    setError('')
+    
+    if (!formData.apiKey || !formData.apiSecret) {
+      setError('Please enter your API key and secret.')
+      setConnecting(false)
+      return
+    }
+    
+    try {
+      const success = await connectBroker(selectedBroker, {
+        api_key: formData.apiKey,
+        api_secret: formData.apiSecret,
+        paper_trading: formData.usePaper,
+      })
+      
+      if (success) {
+        setShowConfig(false)
+      } else {
+        setError('Failed to connect. Check your API credentials.')
+      }
+    } catch (e) {
+      setError('Connection error. Please try again.')
+    }
+    
+    setConnecting(false)
+  }
+
+  // Handle TWS/Gateway connection (IBKR)
   const handleConnect = async () => {
     setConnecting(true)
     setError('')
@@ -122,6 +291,25 @@ export function BrokerConfig() {
     }
     
     setConnecting(false)
+  }
+  
+  // Main connect handler - routes to appropriate auth method
+  const handleConnectClick = () => {
+    const authType = getCurrentBrokerAuthType()
+    switch (authType) {
+      case 'oauth':
+        handleOAuthLogin()
+        break
+      case 'credentials':
+        handleCredentialsLogin()
+        break
+      case 'apikey':
+        handleApiKeyConnect()
+        break
+      case 'tws':
+      default:
+        handleConnect()
+    }
   }
 
   const handleDisconnect = () => {
@@ -255,24 +443,52 @@ export function BrokerConfig() {
                 {brokers.map((b) => (
                   <button
                     key={b.id}
-                    onClick={() => !b.comingSoon && setSelectedBroker(b.id)}
-                    disabled={b.comingSoon}
+                    onClick={() => setSelectedBroker(b.id)}
                     className={`p-4 rounded-lg border text-left transition-all ${
                       selectedBroker === b.id 
                         ? 'border-xfactor-teal bg-xfactor-teal/10' 
                         : 'border-border hover:border-xfactor-teal/50'
-                    } ${b.comingSoon ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    }`}
                   >
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-2xl">{b.logo}</span>
                       <span className="font-medium">{b.name}</span>
-                      {b.comingSoon && (
-                        <span className="text-xs px-2 py-0.5 rounded bg-secondary text-muted-foreground">
-                          Coming Soon
+                      {b.beta && (
+                        <span className="text-xs px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-400">
+                          Beta
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground mb-2">{b.description}</p>
+                    <p className="text-xs text-muted-foreground mb-1">{b.description}</p>
+                    
+                    {/* Auth type indicator */}
+                    <div className="flex items-center gap-1 mb-2 text-[10px] text-muted-foreground">
+                      {b.authType === 'oauth' && (
+                        <>
+                          <LogIn className="h-3 w-3" />
+                          <span>Login with username & password</span>
+                        </>
+                      )}
+                      {b.authType === 'credentials' && (
+                        <>
+                          <User className="h-3 w-3" />
+                          <span>Username & password login</span>
+                        </>
+                      )}
+                      {b.authType === 'apikey' && (
+                        <>
+                          <Key className="h-3 w-3" />
+                          <span>API key required</span>
+                        </>
+                      )}
+                      {b.authType === 'tws' && (
+                        <>
+                          <Smartphone className="h-3 w-3" />
+                          <span>Via TWS/Gateway app</span>
+                        </>
+                      )}
+                    </div>
+                    
                     <div className="flex flex-wrap gap-1">
                       {b.features.map((f) => (
                         <span key={f} className="text-[10px] px-1.5 py-0.5 rounded bg-secondary">
@@ -549,6 +765,8 @@ export function BrokerConfig() {
                     <label className="text-sm text-muted-foreground">API Key</label>
                     <input
                       type="text"
+                      value={formData.apiKey}
+                      onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })}
                       className="w-full mt-1 px-3 py-2 rounded-lg bg-secondary border border-border font-mono"
                       placeholder="PKXXXXXXXXXXXXXXXX"
                     />
@@ -558,6 +776,8 @@ export function BrokerConfig() {
                     <div className="relative">
                       <input
                         type={showPassword ? 'text' : 'password'}
+                        value={formData.apiSecret}
+                        onChange={(e) => setFormData({ ...formData, apiSecret: e.target.value })}
                         className="w-full mt-1 px-3 py-2 pr-10 rounded-lg bg-secondary border border-border font-mono"
                         placeholder="••••••••••••••••"
                       />
@@ -570,6 +790,198 @@ export function BrokerConfig() {
                     </div>
                   </div>
                 </div>
+                
+                {/* Paper trading toggle */}
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="alpaca-paper"
+                    checked={formData.usePaper}
+                    onChange={(e) => setFormData({ ...formData, usePaper: e.target.checked })}
+                    className="rounded"
+                  />
+                  <label htmlFor="alpaca-paper" className="text-sm">
+                    Use Paper Trading ($100,000 simulated)
+                  </label>
+                </div>
+              </div>
+            )}
+            
+            {/* Schwab - OAuth */}
+            {selectedBroker === 'schwab' && (
+              <div className="p-5 space-y-4">
+                <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                  <h4 className="font-medium text-blue-400 mb-2">Charles Schwab Login</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Click the button below to securely log in with your Schwab credentials.
+                    You'll be redirected to Schwab's official login page.
+                  </p>
+                </div>
+                
+                <button
+                  onClick={handleOAuthLogin}
+                  disabled={oauthLoading}
+                  className="w-full py-3 px-4 rounded-lg bg-[#00A0DF] text-white font-medium hover:bg-[#0090CF] flex items-center justify-center gap-2"
+                >
+                  {oauthLoading ? (
+                    <>
+                      <RefreshCw className="h-5 w-5 animate-spin" />
+                      Waiting for login...
+                    </>
+                  ) : (
+                    <>
+                      <ExternalLink className="h-5 w-5" />
+                      Login with Schwab
+                    </>
+                  )}
+                </button>
+                
+                <p className="text-xs text-muted-foreground text-center">
+                  Your password is never stored. Authentication is handled securely by Schwab.
+                </p>
+              </div>
+            )}
+            
+            {/* Tradier - OAuth */}
+            {selectedBroker === 'tradier' && (
+              <div className="p-5 space-y-4">
+                <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                  <h4 className="font-medium text-blue-400 mb-2">Tradier Login</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Click the button below to securely log in with your Tradier account.
+                  </p>
+                </div>
+                
+                <button
+                  onClick={handleOAuthLogin}
+                  disabled={oauthLoading}
+                  className="w-full py-3 px-4 rounded-lg bg-[#1DB954] text-white font-medium hover:bg-[#1AA34A] flex items-center justify-center gap-2"
+                >
+                  {oauthLoading ? (
+                    <>
+                      <RefreshCw className="h-5 w-5 animate-spin" />
+                      Waiting for login...
+                    </>
+                  ) : (
+                    <>
+                      <ExternalLink className="h-5 w-5" />
+                      Login with Tradier
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+            
+            {/* Robinhood - Credentials */}
+            {selectedBroker === 'robinhood' && (
+              <div className="p-5 space-y-4">
+                <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+                  <h4 className="font-medium text-yellow-400 mb-2">⚠️ Beta Feature</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Robinhood integration uses an unofficial API. Use at your own risk.
+                    We recommend using paper trading mode first.
+                  </p>
+                </div>
+                
+                <div className="grid grid-cols-1 gap-4">
+                  <div>
+                    <label className="text-sm text-muted-foreground">Email or Phone</label>
+                    <input
+                      type="text"
+                      value={formData.username}
+                      onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                      className="w-full mt-1 px-3 py-2 rounded-lg bg-secondary border border-border"
+                      placeholder="your@email.com"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm text-muted-foreground">Password</label>
+                    <div className="relative">
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        value={formData.password}
+                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                        className="w-full mt-1 px-3 py-2 pr-10 rounded-lg bg-secondary border border-border"
+                        placeholder="••••••••"
+                      />
+                      <button
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-sm text-muted-foreground">2FA Code (if enabled)</label>
+                    <input
+                      type="text"
+                      value={formData.twoFactorCode}
+                      onChange={(e) => setFormData({ ...formData, twoFactorCode: e.target.value })}
+                      className="w-full mt-1 px-3 py-2 rounded-lg bg-secondary border border-border font-mono text-center tracking-widest"
+                      placeholder="000000"
+                      maxLength={6}
+                    />
+                  </div>
+                </div>
+                
+                <p className="text-xs text-muted-foreground">
+                  🔒 Your credentials are encrypted and never stored on our servers.
+                </p>
+              </div>
+            )}
+            
+            {/* Webull - Credentials */}
+            {selectedBroker === 'webull' && (
+              <div className="p-5 space-y-4">
+                <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+                  <h4 className="font-medium text-yellow-400 mb-2">⚠️ Beta Feature</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Webull integration uses an unofficial API. Use at your own risk.
+                  </p>
+                </div>
+                
+                <div className="grid grid-cols-1 gap-4">
+                  <div>
+                    <label className="text-sm text-muted-foreground">Email or Phone</label>
+                    <input
+                      type="text"
+                      value={formData.username}
+                      onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                      className="w-full mt-1 px-3 py-2 rounded-lg bg-secondary border border-border"
+                      placeholder="your@email.com or +1234567890"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm text-muted-foreground">Password</label>
+                    <div className="relative">
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        value={formData.password}
+                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                        className="w-full mt-1 px-3 py-2 pr-10 rounded-lg bg-secondary border border-border"
+                        placeholder="••••••••"
+                      />
+                      <button
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-sm text-muted-foreground">Trading PIN</label>
+                    <input
+                      type="password"
+                      value={formData.twoFactorCode}
+                      onChange={(e) => setFormData({ ...formData, twoFactorCode: e.target.value })}
+                      className="w-full mt-1 px-3 py-2 rounded-lg bg-secondary border border-border font-mono text-center tracking-widest"
+                      placeholder="••••••"
+                      maxLength={6}
+                    />
+                  </div>
+                </div>
               </div>
             )}
             
@@ -579,32 +991,46 @@ export function BrokerConfig() {
               </div>
             )}
             
-            {/* Footer */}
-            <div className="flex gap-3 p-5 border-t border-border">
-              <button
-                onClick={() => setShowConfig(false)}
-                className="flex-1 px-4 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleConnect}
-                disabled={connecting}
-                className="flex-1 px-4 py-2 rounded-lg bg-xfactor-teal text-white font-medium hover:bg-xfactor-teal/90 text-sm disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {connecting ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 animate-spin" />
-                    Connecting...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="h-4 w-4" />
-                    Connect
-                  </>
-                )}
-              </button>
-            </div>
+            {/* Footer - Only show for non-OAuth brokers (OAuth has its own button) */}
+            {getCurrentBrokerAuthType() !== 'oauth' && (
+              <div className="flex gap-3 p-5 border-t border-border">
+                <button
+                  onClick={() => setShowConfig(false)}
+                  className="flex-1 px-4 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConnectClick}
+                  disabled={connecting || oauthLoading}
+                  className="flex-1 px-4 py-2 rounded-lg bg-xfactor-teal text-white font-medium hover:bg-xfactor-teal/90 text-sm disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {connecting ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                      Connecting...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="h-4 w-4" />
+                      Connect
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+            
+            {/* Cancel button for OAuth brokers */}
+            {getCurrentBrokerAuthType() === 'oauth' && (
+              <div className="flex gap-3 p-5 border-t border-border">
+                <button
+                  onClick={() => setShowConfig(false)}
+                  className="w-full px-4 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm"
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

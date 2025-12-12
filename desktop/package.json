@@ -1,0 +1,36 @@
+{
+  "name": "xfactor-bot-desktop",
+  "version": "0.8.0",
+  "description": "XFactor Bot Desktop - AI-Powered Automated Trading System",
+  "author": "XFactor Trading",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "build:debug": "tauri build --debug",
+    "build:mac-arm": "tauri build --target aarch64-apple-darwin",
+    "build:mac-intel": "tauri build --target x86_64-apple-darwin",
+    "build:mac-universal": "tauri build --target universal-apple-darwin",
+    "build:win": "tauri build --target x86_64-pc-windows-msvc",
+    "build:linux": "tauri build --target x86_64-unknown-linux-gnu",
+    "build:all-mac": "npm run build:mac-arm && npm run build:mac-intel",
+    "icon": "tauri icon ../frontend/public/assets/xfactor-logo.png",
+    "clean": "rm -rf src-tauri/target"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.0.0"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.0.0",
+    "@tauri-apps/plugin-dialog": "^2.0.0",
+    "@tauri-apps/plugin-fs": "^2.0.0",
+    "@tauri-apps/plugin-http": "^2.0.0",
+    "@tauri-apps/plugin-notification": "^2.0.0",
+    "@tauri-apps/plugin-os": "^2.0.0",
+    "@tauri-apps/plugin-process": "^2.0.0",
+    "@tauri-apps/plugin-shell": "^2.0.0",
+    "@tauri-apps/plugin-store": "^2.0.0",
+    "@tauri-apps/plugin-updater": "^2.0.0"
+  }
+}

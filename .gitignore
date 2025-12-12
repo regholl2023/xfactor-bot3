@@ -146,3 +146,5 @@ docker/timescale/data/
 # Redis data
 docker/redis/data/
 
+desktop/node_modules/
+desktop/src-tauri/target/

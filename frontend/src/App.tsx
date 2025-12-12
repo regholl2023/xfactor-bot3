@@ -4,6 +4,7 @@ import { Header } from './components/Header'
 import { AIAssistant } from './components/AIAssistant'
 import { AuthProvider } from './context/AuthContext'
 import { TradingModeProvider } from './context/TradingModeContext'
+import { getWsBaseUrl } from './config/api'
 
 // WebSocket connection states
 type WSState = 'connecting' | 'connected' | 'disconnected' | 'error'
@@ -52,8 +53,7 @@ function App() {
     setWsState('connecting')
     
     try {
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-      const wsUrl = `${protocol}//${window.location.host}/ws`
+      const wsUrl = `${getWsBaseUrl()}/ws`
       
       const ws = new WebSocket(wsUrl)
       wsRef.current = ws

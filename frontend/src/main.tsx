@@ -1,3 +1,6 @@
+// Initialize API configuration first (patches fetch for Tauri)
+import './config/api'
+
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
