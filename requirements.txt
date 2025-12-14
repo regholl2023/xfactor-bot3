@@ -82,3 +82,6 @@ ruff>=0.1.0
 mypy>=1.8.0
 black>=24.1.0
 
+# Desktop Build
+pyinstaller>=6.0.0
+
