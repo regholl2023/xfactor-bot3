@@ -7,7 +7,7 @@ Identifies overbought/oversold conditions and trades the reversion to mean.
 from typing import Optional, Any
 
 import pandas as pd
-import pandas_ta as ta
+from src.strategies import ta_compat as ta
 from loguru import logger
 
 from src.strategies.base_strategy import BaseStrategy, Signal, SignalType

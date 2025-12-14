@@ -124,7 +124,7 @@ def main():
         "--collect-all", "urllib3",
         # Data processing
         "--collect-all", "pandas",
-        "--collect-all", "pandas_ta",
+        # pandas_ta removed - using ta_compat wrapper instead
         "--collect-all", "ta",
         "--collect-all", "numpy",
         "--collect-all", "polars",
