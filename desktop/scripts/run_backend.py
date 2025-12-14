@@ -8,6 +8,17 @@ import os
 import sys
 import logging
 
+# Explicit imports for PyInstaller to detect
+import uvicorn
+import fastapi
+import starlette
+import pydantic
+import pandas
+import numpy
+import httpx
+import websockets
+import aiohttp
+
 # Setup logging
 logging.basicConfig(
     level=logging.INFO,
