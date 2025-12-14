@@ -145,6 +145,9 @@ def main():
         "--collect-all", "bs4",
         "--collect-all", "feedparser",
         "--collect-all", "lxml",
+        # Typing
+        "--collect-all", "typing_extensions",
+        "--hidden-import", "typing_extensions",
         # Other utilities
         "--collect-all", "orjson",
         "--collect-all", "python_dotenv",
