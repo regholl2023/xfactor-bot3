@@ -51,7 +51,7 @@ def main():
     # Check if PyInstaller is installed
     try:
         import PyInstaller
-        print(f"✓ PyInstaller version: {PyInstaller.__version__}")
+        print(f"[OK] PyInstaller version: {PyInstaller.__version__}")
     except ImportError:
         print("Installing PyInstaller...")
         subprocess.run([sys.executable, "-m", "pip", "install", "pyinstaller"], check=True)
@@ -61,21 +61,22 @@ def main():
     
     # Get target triple (use argument if provided, otherwise auto-detect)
     target_triple = args.target if args.target else get_target_triple()
-    print(f"✓ Target: {target_triple}")
+    print(f"[OK] Target: {target_triple}")
     
     # Check if cross-compiling (PyInstaller can only build for current platform)
     current_triple = get_target_triple()
     if target_triple != current_triple:
-        print(f"⚠️  Cross-compilation requested ({target_triple}) but running on {current_triple}")
-        print(f"   PyInstaller can only build for the current platform.")
-        print(f"   Creating a placeholder for {target_triple}...")
+        print(f"[WARN] Cross-compilation requested ({target_triple}) but running on {current_triple}")
+        print(f"       PyInstaller can only build for the current platform.")
+        print(f"       Creating a placeholder for {target_triple}...")
         
         # Create a placeholder script that will be replaced with actual binary
         placeholder_path = BINARIES_DIR / f"xfactor-backend-{target_triple}"
         with open(placeholder_path, 'w') as f:
             f.write("#!/bin/sh\\necho 'This is a placeholder. Build on the target platform.'\\n")
-        os.chmod(placeholder_path, 0o755)
-        print(f"   Created placeholder: {placeholder_path}")
+        if platform.system() != "Windows":
+            os.chmod(placeholder_path, 0o755)
+        print(f"       Created placeholder: {placeholder_path}")
         return
     
     # Output binary name (Tauri expects name-target format)
@@ -145,22 +146,22 @@ def main():
     result = subprocess.run(cmd, capture_output=False)
     
     if result.returncode != 0:
-        print(f"\n❌ Build failed with exit code {result.returncode}")
+        print(f"\n[ERROR] Build failed with exit code {result.returncode}")
         sys.exit(1)
     
     # Verify output
     if output_path.exists():
         size_mb = output_path.stat().st_size / (1024 * 1024)
-        print(f"\n✓ Backend built successfully!")
-        print(f"  Path: {output_path}")
-        print(f"  Size: {size_mb:.1f} MB")
+        print(f"\n[OK] Backend built successfully!")
+        print(f"     Path: {output_path}")
+        print(f"     Size: {size_mb:.1f} MB")
         
         # Make executable on Unix
         if platform.system() != "Windows":
             os.chmod(output_path, 0o755)
-            print(f"  Permissions: executable")
+            print(f"     Permissions: executable")
     else:
-        print(f"\n❌ Output file not found: {output_path}")
+        print(f"\n[ERROR] Output file not found: {output_path}")
         sys.exit(1)
     
     print("\n" + "=" * 60)
