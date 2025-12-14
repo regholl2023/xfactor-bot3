@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
-import { RefreshCw, TrendingUp, TrendingDown, Search, SortAsc, SortDesc, X, Info, AlertTriangle, Wallet, Bot, TestTube2, Shield, Zap } from 'lucide-react'
+import { RefreshCw, TrendingUp, TrendingDown, Search, SortAsc, SortDesc, X, Info, AlertTriangle, Wallet, Bot, TestTube2, Shield, Zap, LineChart } from 'lucide-react'
 import { useTradingMode } from '../context/TradingModeContext'
+import { PositionPerformanceChart } from './PositionPerformanceChart'
 
 interface Position {
   symbol: string
@@ -37,7 +38,7 @@ const emptySummary: PortfolioSummary = {
   position_count: 0,
 }
 
-type SortField = 'symbol' | 'quantity' | 'market_value' | 'unrealized_pnl' | 'unrealized_pnl_pct'
+type SortField = 'symbol' | 'quantity' | 'market_value' | 'unrealized_pnl' | 'unrealized_pnl_pct' | 'current_price' | 'avg_cost'
 type SortDir = 'asc' | 'desc'
 
 export function PositionsTable() {
@@ -50,6 +51,7 @@ export function PositionsTable() {
   const [sortDir, setSortDir] = useState<SortDir>('desc')
   const [showHelp, setShowHelp] = useState(false)
   const [isLiveData, setIsLiveData] = useState(false)
+  const [chartSymbol, setChartSymbol] = useState<string | null>(null)
   
   const getModeLabel = () => {
     switch (mode) {
@@ -347,13 +349,20 @@ export function PositionsTable() {
           <tbody>
             {filteredPositions.map((pos) => (
               <tr key={pos.symbol} className="border-b border-border/50 hover:bg-secondary/30">
-                <td className="py-2 font-medium flex items-center gap-2">
-                  {pos.quantity > 0 ? (
-                    <TrendingUp className="h-3 w-3 text-profit" />
-                  ) : (
-                    <TrendingDown className="h-3 w-3 text-loss" />
-                  )}
-                  {pos.symbol}
+                <td className="py-2 font-medium">
+                  <button 
+                    onClick={() => setChartSymbol(pos.symbol)}
+                    className="flex items-center gap-2 hover:text-xfactor-teal transition-colors"
+                    title="View price chart"
+                  >
+                    {pos.quantity > 0 ? (
+                      <TrendingUp className="h-3 w-3 text-profit" />
+                    ) : (
+                      <TrendingDown className="h-3 w-3 text-loss" />
+                    )}
+                    <LineChart className="h-3 w-3 text-muted-foreground" />
+                    <span className="hover:underline">{pos.symbol}</span>
+                  </button>
                 </td>
                 <td className={`py-2 ${pos.quantity < 0 ? 'text-loss' : ''}`}>
                   {pos.quantity.toLocaleString()}
@@ -389,6 +398,14 @@ export function PositionsTable() {
       <div className="text-xs text-muted-foreground text-right">
         {filteredPositions.length} of {positions.length} positions
       </div>
+      
+      {/* Position Performance Chart Modal */}
+      {chartSymbol && (
+        <PositionPerformanceChart
+          symbol={chartSymbol}
+          onClose={() => setChartSymbol(null)}
+        />
+      )}
     </div>
   )
 }

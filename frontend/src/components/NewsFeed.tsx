@@ -8,6 +8,7 @@ import {
   useDataFilters, FilterBar, QuickFilters, 
   type FieldDefinition, type FilterConfig 
 } from './DataFilters'
+import { openExternalUrl } from '../utils/openUrl'
 
 interface NewsItem {
   id: string
@@ -374,7 +375,7 @@ export function NewsFeed({ maxItems = 100, itemsPerPage = 10 }: NewsFeedProps) {
   }
 
   const openArticle = (url: string) => {
-    window.open(url, '_blank', 'noopener,noreferrer')
+    openExternalUrl(url)
   }
 
   const handleQuickFilter = (filter: FilterConfig) => {

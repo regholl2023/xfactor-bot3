@@ -66,6 +66,9 @@ export function BrokerConfig() {
   const [oauthLoading, setOauthLoading] = useState(false)
   
   const [showAdvanced, setShowAdvanced] = useState(false)
+  
+  // IBKR connection method: 'tws' (TWS/Gateway) or 'web' (Client Portal with username/password)
+  const [ibkrConnectionMethod, setIbkrConnectionMethod] = useState<'tws' | 'web'>('web')
 
   const brokers = [
     { 
@@ -76,8 +79,8 @@ export function BrokerConfig() {
       features: ['Stocks', 'Options', 'Futures', 'Crypto', 'Forex'],
       minDeposit: '$0 (Paper) / $100 (Live)',
       paperInfo: '$1,000,000 simulated cash for paper trading',
-      authType: 'tws' as const,  // Login via TWS/Gateway app
-      authDescription: 'Login to TWS or IB Gateway, then connect',
+      authType: 'ibkr' as const,  // Special handling for IBKR (TWS or Web)
+      authDescription: 'Login with username & password or via TWS',
     },
     { 
       id: 'alpaca', 
@@ -306,7 +309,14 @@ export function BrokerConfig() {
       case 'apikey':
         handleApiKeyConnect()
         break
-      case 'tws':
+      case 'ibkr':
+        // IBKR supports both web (username/password) and TWS methods
+        if (ibkrConnectionMethod === 'web') {
+          handleCredentialsLogin()
+        } else {
+          handleConnect()
+        }
+        break
       default:
         handleConnect()
     }
@@ -481,10 +491,10 @@ export function BrokerConfig() {
                           <span>API key required</span>
                         </>
                       )}
-                      {b.authType === 'tws' && (
+                      {b.authType === 'ibkr' && (
                         <>
-                          <Smartphone className="h-3 w-3" />
-                          <span>Via TWS/Gateway app</span>
+                          <User className="h-3 w-3" />
+                          <span>Username/password or TWS</span>
                         </>
                       )}
                     </div>
@@ -504,62 +514,157 @@ export function BrokerConfig() {
             {/* Configuration Form */}
             {selectedBroker === 'ibkr' && (
               <div className="p-5 space-y-4">
-                <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
-                  <h4 className="font-medium text-blue-400 mb-2">IBKR Setup Instructions</h4>
-                  <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
-                    <li>Download and install <a href="https://www.interactivebrokers.com/en/trading/tws.php" target="_blank" className="text-blue-400 hover:underline">Trader Workstation (TWS)</a> or IB Gateway</li>
-                    <li>In TWS: Edit → Global Configuration → API → Settings</li>
-                    <li>Enable "Enable ActiveX and Socket Clients"</li>
-                    <li>Set Socket port to 7497 (paper) or 7496 (live)</li>
-                    <li>Disable "Read-Only API" to allow trading</li>
-                  </ol>
+                {/* Connection Method Toggle */}
+                <div className="flex rounded-lg overflow-hidden border border-border">
+                  <button
+                    type="button"
+                    onClick={() => setIbkrConnectionMethod('web')}
+                    className={`flex-1 py-3 px-4 text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+                      ibkrConnectionMethod === 'web' 
+                        ? 'bg-xfactor-teal text-white' 
+                        : 'bg-secondary hover:bg-secondary/80'
+                    }`}
+                  >
+                    <User className="h-4 w-4" />
+                    Username &amp; Password
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIbkrConnectionMethod('tws')}
+                    className={`flex-1 py-3 px-4 text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+                      ibkrConnectionMethod === 'tws' 
+                        ? 'bg-xfactor-teal text-white' 
+                        : 'bg-secondary hover:bg-secondary/80'
+                    }`}
+                  >
+                    <Smartphone className="h-4 w-4" />
+                    TWS / Gateway
+                  </button>
                 </div>
                 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm text-muted-foreground">Host</label>
-                    <input
-                      type="text"
-                      value={formData.host}
-                      onChange={(e) => setFormData({ ...formData, host: e.target.value })}
-                      className="w-full mt-1 px-3 py-2 rounded-lg bg-secondary border border-border"
-                      placeholder="127.0.0.1"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm text-muted-foreground">Port</label>
-                    <input
-                      type="text"
-                      value={formData.port}
-                      onChange={(e) => setFormData({ ...formData, port: e.target.value })}
-                      className="w-full mt-1 px-3 py-2 rounded-lg bg-secondary border border-border"
-                      placeholder="7497"
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      7497 = Paper, 7496 = Live
-                    </p>
-                  </div>
-                  <div>
-                    <label className="text-sm text-muted-foreground">Client ID</label>
-                    <input
-                      type="text"
-                      value={formData.clientId}
-                      onChange={(e) => setFormData({ ...formData, clientId: e.target.value })}
-                      className="w-full mt-1 px-3 py-2 rounded-lg bg-secondary border border-border"
-                      placeholder="1"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm text-muted-foreground">Account ID (optional)</label>
-                    <input
-                      type="text"
-                      value={formData.accountId}
-                      onChange={(e) => setFormData({ ...formData, accountId: e.target.value })}
-                      className="w-full mt-1 px-3 py-2 rounded-lg bg-secondary border border-border"
-                      placeholder="DU1234567"
-                    />
-                  </div>
-                </div>
+                {/* Web Login (Username/Password) */}
+                {ibkrConnectionMethod === 'web' && (
+                  <>
+                    <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                      <h4 className="font-medium text-blue-400 mb-2">Login with IBKR Credentials</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Enter your Interactive Brokers username and password. This uses IBKR's Client Portal API.
+                      </p>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 gap-4">
+                      <div>
+                        <label className="text-sm text-muted-foreground">Username</label>
+                        <input
+                          type="text"
+                          value={formData.username}
+                          onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                          className="w-full mt-1 px-3 py-2 rounded-lg bg-secondary border border-border"
+                          placeholder="Your IBKR username"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm text-muted-foreground">Password</label>
+                        <div className="relative">
+                          <input
+                            type={showPassword ? 'text' : 'password'}
+                            value={formData.password}
+                            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                            className="w-full mt-1 px-3 py-2 pr-10 rounded-lg bg-secondary border border-border"
+                            placeholder="••••••••"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                          >
+                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-sm text-muted-foreground">Two-Factor Code (if enabled)</label>
+                        <input
+                          type="text"
+                          value={formData.twoFactorCode}
+                          onChange={(e) => setFormData({ ...formData, twoFactorCode: e.target.value })}
+                          className="w-full mt-1 px-3 py-2 rounded-lg bg-secondary border border-border font-mono text-center tracking-widest"
+                          placeholder="000000"
+                          maxLength={6}
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          From IBKR Mobile app or security device
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="p-3 rounded-lg bg-secondary/50 text-sm text-muted-foreground">
+                      🔒 Your credentials are encrypted and used only for authentication. We never store your password.
+                    </div>
+                  </>
+                )}
+                
+                {/* TWS/Gateway Connection */}
+                {ibkrConnectionMethod === 'tws' && (
+                  <>
+                    <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                      <h4 className="font-medium text-blue-400 mb-2">TWS / Gateway Setup</h4>
+                      <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
+                        <li>Download and install <a href="https://www.interactivebrokers.com/en/trading/tws.php" target="_blank" className="text-blue-400 hover:underline">Trader Workstation (TWS)</a> or IB Gateway</li>
+                        <li>Log in with your IBKR credentials in TWS</li>
+                        <li>Go to: Edit → Global Configuration → API → Settings</li>
+                        <li>Enable "Enable ActiveX and Socket Clients"</li>
+                        <li>Disable "Read-Only API" to allow trading</li>
+                      </ol>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm text-muted-foreground">Host</label>
+                        <input
+                          type="text"
+                          value={formData.host}
+                          onChange={(e) => setFormData({ ...formData, host: e.target.value })}
+                          className="w-full mt-1 px-3 py-2 rounded-lg bg-secondary border border-border"
+                          placeholder="127.0.0.1"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm text-muted-foreground">Port</label>
+                        <input
+                          type="text"
+                          value={formData.port}
+                          onChange={(e) => setFormData({ ...formData, port: e.target.value })}
+                          className="w-full mt-1 px-3 py-2 rounded-lg bg-secondary border border-border"
+                          placeholder="7497"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          7497 = Paper, 7496 = Live
+                        </p>
+                      </div>
+                      <div>
+                        <label className="text-sm text-muted-foreground">Client ID</label>
+                        <input
+                          type="text"
+                          value={formData.clientId}
+                          onChange={(e) => setFormData({ ...formData, clientId: e.target.value })}
+                          className="w-full mt-1 px-3 py-2 rounded-lg bg-secondary border border-border"
+                          placeholder="1"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm text-muted-foreground">Account ID (optional)</label>
+                        <input
+                          type="text"
+                          value={formData.accountId}
+                          onChange={(e) => setFormData({ ...formData, accountId: e.target.value })}
+                          className="w-full mt-1 px-3 py-2 rounded-lg bg-secondary border border-border"
+                          placeholder="DU1234567"
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
                 
                 <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50">
                   <input

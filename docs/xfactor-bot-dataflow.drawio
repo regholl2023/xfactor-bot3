@@ -1,0 +1,243 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" modified="2024-12-12T23:50:00.000Z" agent="XFactor Bot" version="22.1.0" type="device">
+  <diagram id="xfactor-dataflow" name="XFactor Bot Data Flow">
+    <mxGraphModel dx="1434" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1200" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        
+        <!-- Title -->
+        <mxCell id="title" value="XFactor Bot - Trading System Data Flow" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=24;fontStyle=1;fontColor=#1a1a2e;" vertex="1" parent="1">
+          <mxGeometry x="500" y="20" width="600" height="40" as="geometry" />
+        </mxCell>
+        
+        <!-- ==================== DATA SOURCES (Left) ==================== -->
+        <mxCell id="datasources-group" value="DATA SOURCES" style="swimlane;horizontal=1;startSize=30;fillColor=#e3f2fd;strokeColor=#1565c0;fontStyle=1;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="40" y="100" width="200" height="500" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="ds-yahoo" value="Yahoo Finance&#xa;(yfinance)&#xa;─────────&#xa;Stock Prices&#xa;Historical Data" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bbdefb;strokeColor=#1565c0;fontSize=11;" vertex="1" parent="datasources-group">
+          <mxGeometry x="20" y="40" width="160" height="70" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="ds-coingecko" value="CoinGecko API&#xa;─────────&#xa;Crypto Prices&#xa;Fear &amp; Greed Index&#xa;Whale Alerts" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff3e0;strokeColor=#ef6c00;fontSize=11;" vertex="1" parent="datasources-group">
+          <mxGeometry x="20" y="120" width="160" height="70" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="ds-news" value="News Sources&#xa;─────────&#xa;AInvest&#xa;Financial News&#xa;Earnings Reports" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e8f5e9;strokeColor=#2e7d32;fontSize=11;" vertex="1" parent="datasources-group">
+          <mxGeometry x="20" y="200" width="160" height="70" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="ds-tradingview" value="TradingView&#xa;─────────&#xa;Webhooks&#xa;Alerts&#xa;Signals" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fce4ec;strokeColor=#c2185b;fontSize=11;" vertex="1" parent="datasources-group">
+          <mxGeometry x="20" y="280" width="160" height="70" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="ds-ollama" value="Ollama / LLM&#xa;─────────&#xa;AI Analysis&#xa;Strategy Prompts&#xa;Sentiment" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f3e5f5;strokeColor=#7b1fa2;fontSize=11;" vertex="1" parent="datasources-group">
+          <mxGeometry x="20" y="360" width="160" height="70" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="ds-files" value="Local Files&#xa;─────────&#xa;CSV Data&#xa;Config Files" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eceff1;strokeColor=#546e7a;fontSize=11;" vertex="1" parent="datasources-group">
+          <mxGeometry x="20" y="440" width="160" height="50" as="geometry" />
+        </mxCell>
+        
+        <!-- ==================== BACKEND CORE (Center) ==================== -->
+        <mxCell id="backend-group" value="BACKEND (FastAPI + Python)" style="swimlane;horizontal=1;startSize=30;fillColor=#1a1a2e;strokeColor=#00d4aa;fontStyle=1;fontSize=14;fontColor=#ffffff;" vertex="1" parent="1">
+          <mxGeometry x="280" y="100" width="520" height="500" as="geometry" />
+        </mxCell>
+        
+        <!-- API Layer -->
+        <mxCell id="api-layer" value="API Layer (REST + WebSocket)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#00d4aa;strokeColor=#00a882;fontStyle=1;fontSize=12;" vertex="1" parent="backend-group">
+          <mxGeometry x="20" y="40" width="480" height="40" as="geometry" />
+        </mxCell>
+        
+        <!-- Bot Manager -->
+        <mxCell id="bot-manager" value="BOT MANAGER&#xa;─────────────────&#xa;Create/Start/Stop Bots&#xa;Max 100 Bots&#xa;Status Tracking" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2d2d44;strokeColor=#00d4aa;fontColor=#ffffff;fontSize=11;" vertex="1" parent="backend-group">
+          <mxGeometry x="20" y="100" width="150" height="90" as="geometry" />
+        </mxCell>
+        
+        <!-- Strategies -->
+        <mxCell id="strategies" value="STRATEGIES&#xa;─────────────────&#xa;Technical Analysis&#xa;Momentum&#xa;Mean Reversion&#xa;News Sentiment&#xa;ML Optimization" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2d2d44;strokeColor=#00d4aa;fontColor=#ffffff;fontSize=11;" vertex="1" parent="backend-group">
+          <mxGeometry x="185" y="100" width="150" height="90" as="geometry" />
+        </mxCell>
+        
+        <!-- Risk Manager -->
+        <mxCell id="risk-manager" value="RISK MANAGER&#xa;─────────────────&#xa;Position Sizing&#xa;Stop Loss/Take Profit&#xa;Max Drawdown&#xa;Kill Switch" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2d2d44;strokeColor=#ff6b6b;fontColor=#ffffff;fontSize=11;" vertex="1" parent="backend-group">
+          <mxGeometry x="350" y="100" width="150" height="90" as="geometry" />
+        </mxCell>
+        
+        <!-- Backtesting -->
+        <mxCell id="backtesting" value="BACKTESTING&#xa;─────────────────&#xa;Historical Simulation&#xa;Performance Metrics&#xa;Walk-Forward Analysis" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2d2d44;strokeColor=#ffd93d;fontColor=#ffffff;fontSize=11;" vertex="1" parent="backend-group">
+          <mxGeometry x="20" y="210" width="150" height="80" as="geometry" />
+        </mxCell>
+        
+        <!-- Portfolio -->
+        <mxCell id="portfolio" value="PORTFOLIO&#xa;─────────────────&#xa;Rebalancing&#xa;Tax-Loss Harvesting&#xa;Multi-Account" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2d2d44;strokeColor=#6bcb77;fontColor=#ffffff;fontSize=11;" vertex="1" parent="backend-group">
+          <mxGeometry x="185" y="210" width="150" height="80" as="geometry" />
+        </mxCell>
+        
+        <!-- Fee Tracker -->
+        <mxCell id="fee-tracker" value="FEE TRACKER&#xa;─────────────────&#xa;Commission Calc&#xa;Expense Reports&#xa;Broker Fees" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2d2d44;strokeColor=#4ecdc4;fontColor=#ffffff;fontSize=11;" vertex="1" parent="backend-group">
+          <mxGeometry x="350" y="210" width="150" height="80" as="geometry" />
+        </mxCell>
+        
+        <!-- Order Execution -->
+        <mxCell id="order-execution" value="ORDER EXECUTION ENGINE&#xa;────────────────────────────&#xa;Order Routing │ Fill Simulation │ Slippage Calc" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ff6b6b;strokeColor=#c0392b;fontStyle=1;fontColor=#ffffff;fontSize=11;" vertex="1" parent="backend-group">
+          <mxGeometry x="20" y="310" width="480" height="50" as="geometry" />
+        </mxCell>
+        
+        <!-- Broker Abstraction -->
+        <mxCell id="broker-abstraction" value="BROKER ABSTRACTION LAYER&#xa;────────────────────────────&#xa;Unified API │ Paper/Live Mode │ Multi-Broker Support" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3498db;strokeColor=#2980b9;fontStyle=1;fontColor=#ffffff;fontSize=11;" vertex="1" parent="backend-group">
+          <mxGeometry x="20" y="380" width="480" height="50" as="geometry" />
+        </mxCell>
+        
+        <!-- Auth -->
+        <mxCell id="auth" value="AUTH&#xa;(106431)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e74c3c;strokeColor=#c0392b;fontColor=#ffffff;fontSize=10;" vertex="1" parent="backend-group">
+          <mxGeometry x="20" y="450" width="70" height="40" as="geometry" />
+        </mxCell>
+        
+        <!-- WebSocket -->
+        <mxCell id="websocket" value="WebSocket&#xa;Real-time" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#9b59b6;strokeColor=#8e44ad;fontColor=#ffffff;fontSize=10;" vertex="1" parent="backend-group">
+          <mxGeometry x="100" y="450" width="70" height="40" as="geometry" />
+        </mxCell>
+        
+        <!-- Monitoring -->
+        <mxCell id="monitoring" value="Metrics&#xa;Logging" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1abc9c;strokeColor=#16a085;fontColor=#ffffff;fontSize=10;" vertex="1" parent="backend-group">
+          <mxGeometry x="180" y="450" width="70" height="40" as="geometry" />
+        </mxCell>
+        
+        <!-- ==================== BROKERS (Right) ==================== -->
+        <mxCell id="brokers-group" value="BROKERS" style="swimlane;horizontal=1;startSize=30;fillColor=#fff8e1;strokeColor=#ff8f00;fontStyle=1;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="840" y="100" width="180" height="500" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="broker-ibkr" value="Interactive Brokers&#xa;─────────&#xa;TWS/Gateway&#xa;Options/Futures&#xa;$1M Paper" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffecb3;strokeColor=#ff8f00;fontSize=11;" vertex="1" parent="brokers-group">
+          <mxGeometry x="15" y="40" width="150" height="70" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="broker-alpaca" value="Alpaca&#xa;─────────&#xa;API Keys&#xa;Stocks/Crypto&#xa;$100K Paper" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c8e6c9;strokeColor=#43a047;fontSize=11;" vertex="1" parent="brokers-group">
+          <mxGeometry x="15" y="120" width="150" height="70" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="broker-schwab" value="Charles Schwab&#xa;─────────&#xa;OAuth Login&#xa;Stocks/Options" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bbdefb;strokeColor=#1976d2;fontSize=11;" vertex="1" parent="brokers-group">
+          <mxGeometry x="15" y="200" width="150" height="60" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="broker-tradier" value="Tradier&#xa;─────────&#xa;OAuth Login&#xa;Stocks/Options" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d1c4e9;strokeColor=#7e57c2;fontSize=11;" vertex="1" parent="brokers-group">
+          <mxGeometry x="15" y="270" width="150" height="60" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="broker-robinhood" value="Robinhood (Beta)&#xa;─────────&#xa;Username/Password&#xa;2FA Support" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffcdd2;strokeColor=#e53935;fontSize=11;" vertex="1" parent="brokers-group">
+          <mxGeometry x="15" y="340" width="150" height="60" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="broker-webull" value="Webull (Beta)&#xa;─────────&#xa;Username/Password&#xa;Trading PIN" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#b2ebf2;strokeColor=#00acc1;fontSize=11;" vertex="1" parent="brokers-group">
+          <mxGeometry x="15" y="410" width="150" height="60" as="geometry" />
+        </mxCell>
+        
+        <!-- ==================== FRONTEND (Bottom) ==================== -->
+        <mxCell id="frontend-group" value="FRONTEND (React + Tauri Desktop)" style="swimlane;horizontal=1;startSize=30;fillColor=#e8eaf6;strokeColor=#3f51b5;fontStyle=1;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="40" y="640" width="980" height="180" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="fe-dashboard" value="Dashboard&#xa;Portfolio View&#xa;Equity Chart" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c5cae9;strokeColor=#3f51b5;fontSize=11;" vertex="1" parent="frontend-group">
+          <mxGeometry x="20" y="40" width="110" height="60" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="fe-bots" value="Bot Manager&#xa;100 Bots Max&#xa;Start/Stop/Pause" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#c5cae9;strokeColor=#3f51b5;fontSize=11;" vertex="1" parent="frontend-group">
+          <mxGeometry x="140" y="40" width="110" height="60" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="fe-crypto" value="Crypto Panel&#xa;Live Prices&#xa;Fear &amp; Greed" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff3e0;strokeColor=#ef6c00;fontSize=11;" vertex="1" parent="frontend-group">
+          <mxGeometry x="260" y="40" width="110" height="60" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="fe-commodities" value="Commodities&#xa;Gold/Oil/Gas&#xa;Metals" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fce4ec;strokeColor=#c2185b;fontSize=11;" vertex="1" parent="frontend-group">
+          <mxGeometry x="380" y="40" width="110" height="60" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="fe-news" value="News Feed&#xa;Sentiment&#xa;Read Articles" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e8f5e9;strokeColor=#2e7d32;fontSize=11;" vertex="1" parent="frontend-group">
+          <mxGeometry x="500" y="40" width="110" height="60" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="fe-admin" value="Admin Panel&#xa;Broker Config&#xa;Settings" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffcdd2;strokeColor=#e53935;fontSize=11;" vertex="1" parent="frontend-group">
+          <mxGeometry x="620" y="40" width="110" height="60" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="fe-ai" value="AI Assistant&#xa;Ollama/OpenAI&#xa;NL Queries" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f3e5f5;strokeColor=#7b1fa2;fontSize=11;" vertex="1" parent="frontend-group">
+          <mxGeometry x="740" y="40" width="110" height="60" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="fe-fees" value="Fee Tracker&#xa;Expenses&#xa;Breakdown" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e0f2f1;strokeColor=#00897b;fontSize=11;" vertex="1" parent="frontend-group">
+          <mxGeometry x="860" y="40" width="100" height="60" as="geometry" />
+        </mxCell>
+        
+        <!-- Tauri Desktop -->
+        <mxCell id="tauri-desktop" value="🖥️ Tauri Desktop App (macOS/Windows/Linux) - Bundled Backend - Auto-start - Standalone" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1a1a2e;strokeColor=#00d4aa;fontColor=#ffffff;fontStyle=1;fontSize=12;" vertex="1" parent="frontend-group">
+          <mxGeometry x="20" y="120" width="940" height="40" as="geometry" />
+        </mxCell>
+        
+        <!-- ==================== ARROWS / DATA FLOW ==================== -->
+        
+        <!-- Data Sources to Backend -->
+        <mxCell id="arrow-ds-backend" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#1565c0;strokeWidth=2;endArrow=classic;endFill=1;" edge="1" parent="1" source="datasources-group" target="backend-group">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow-ds-label" value="Market Data&#xa;News&#xa;Signals" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;fontColor=#1565c0;" vertex="1" parent="1">
+          <mxGeometry x="245" y="320" width="60" height="50" as="geometry" />
+        </mxCell>
+        
+        <!-- Backend to Brokers -->
+        <mxCell id="arrow-backend-brokers" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#ff8f00;strokeWidth=2;endArrow=classic;endFill=1;startArrow=classic;startFill=1;" edge="1" parent="1" source="backend-group" target="brokers-group">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow-broker-label" value="Orders&#xa;Positions&#xa;Account Data" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;fontColor=#ff8f00;" vertex="1" parent="1">
+          <mxGeometry x="805" y="320" width="70" height="50" as="geometry" />
+        </mxCell>
+        
+        <!-- Backend to Frontend -->
+        <mxCell id="arrow-backend-frontend" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#3f51b5;strokeWidth=2;endArrow=classic;endFill=1;startArrow=classic;startFill=1;" edge="1" parent="1" source="backend-group" target="frontend-group">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow-fe-label" value="REST API + WebSocket&#xa;Real-time Updates" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;fontColor=#3f51b5;" vertex="1" parent="1">
+          <mxGeometry x="545" y="610" width="120" height="30" as="geometry" />
+        </mxCell>
+        
+        <!-- Legend -->
+        <mxCell id="legend" value="LEGEND" style="swimlane;horizontal=1;startSize=20;fillColor=#fafafa;strokeColor=#9e9e9e;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1060" y="100" width="180" height="200" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="legend-data" value="→ Data Flow" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;" vertex="1" parent="legend">
+          <mxGeometry x="10" y="30" width="160" height="20" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="legend-realtime" value="⟷ Bidirectional" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;" vertex="1" parent="legend">
+          <mxGeometry x="10" y="55" width="160" height="20" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="legend-port" value="🔌 Port 9876" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;" vertex="1" parent="legend">
+          <mxGeometry x="10" y="80" width="160" height="20" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="legend-auth" value="🔐 Auth: 106431" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;" vertex="1" parent="legend">
+          <mxGeometry x="10" y="105" width="160" height="20" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="legend-bots" value="🤖 Max 100 Bots" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;" vertex="1" parent="legend">
+          <mxGeometry x="10" y="130" width="160" height="20" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="legend-standalone" value="📦 Standalone Desktop" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;" vertex="1" parent="legend">
+          <mxGeometry x="10" y="155" width="160" height="20" as="geometry" />
+        </mxCell>
+        
+        <!-- Version -->
+        <mxCell id="version" value="XFactor Bot v0.9.0 | 2024-12-12" style="text;html=1;strokeColor=none;fillColor=none;align=right;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;fontColor=#9e9e9e;" vertex="1" parent="1">
+          <mxGeometry x="1060" y="820" width="180" height="20" as="geometry" />
+        </mxCell>
+        
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
+

@@ -3,11 +3,15 @@
 //! AI-Powered Automated Trading System with backtesting, ML optimization,
 //! portfolio rebalancing, and multi-account support.
 
+use std::sync::Mutex;
+use std::process::{Child, Command, Stdio};
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem, Submenu},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     Emitter, Manager, Runtime,
 };
+use tauri_plugin_shell::ShellExt;
+use tauri_plugin_shell::process::CommandChild;
 
 /// Trading state shared across the app
 #[derive(Default)]
@@ -17,18 +21,51 @@ pub struct TradingState {
     pub active_bots: u32,
 }
 
+/// Backend process state
+pub struct BackendState {
+    pub child: Mutex<Option<CommandChild>>,
+}
+
 /// Start the Python backend server
 #[tauri::command]
-async fn start_backend() -> Result<String, String> {
-    // In development, backend runs separately
-    // In production, we'd spawn the bundled Python server
+async fn start_backend(app: tauri::AppHandle, state: tauri::State<'_, BackendState>) -> Result<String, String> {
+    // Check if already running
+    {
+        let guard = state.child.lock().unwrap();
+        if guard.is_some() {
+            return Ok("Backend already running".to_string());
+        }
+    }
+    
+    // Spawn the sidecar backend
+    let sidecar = app.shell()
+        .sidecar("xfactor-backend")
+        .map_err(|e| format!("Failed to create sidecar command: {}", e))?;
+    
+    let (mut _rx, child) = sidecar.spawn()
+        .map_err(|e| format!("Failed to spawn backend: {}", e))?;
+    
+    // Store the child process
+    {
+        let mut guard = state.child.lock().unwrap();
+        *guard = Some(child);
+    }
+    
+    log::info!("Backend sidecar started");
     Ok("Backend started".to_string())
 }
 
 /// Stop the Python backend server
 #[tauri::command]
-async fn stop_backend() -> Result<String, String> {
-    Ok("Backend stopped".to_string())
+async fn stop_backend(state: tauri::State<'_, BackendState>) -> Result<String, String> {
+    let mut guard = state.child.lock().unwrap();
+    if let Some(child) = guard.take() {
+        child.kill().map_err(|e| format!("Failed to kill backend: {}", e))?;
+        log::info!("Backend sidecar stopped");
+        Ok("Backend stopped".to_string())
+    } else {
+        Ok("Backend was not running".to_string())
+    }
 }
 
 /// Get system information
@@ -221,6 +258,9 @@ pub fn run() {
     }
 
     builder
+        .manage(BackendState {
+            child: Mutex::new(None),
+        })
         .setup(|app| {
             // Create menu
             let menu = create_menu(app.handle())?;
@@ -228,6 +268,92 @@ pub fn run() {
 
             // Setup system tray
             setup_tray(app.handle())?;
+
+            // Start backend automatically
+            let handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                log::info!("Starting backend...");
+                
+                // Give the app a moment to initialize
+                tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+                
+                // Get the resource directory (MacOS folder in bundled app)
+                let backend_path = if let Ok(resource_dir) = handle.path().resource_dir() {
+                    // In bundled app, look in the MacOS folder (parent of Resources)
+                    let macos_dir = resource_dir.parent().unwrap_or(&resource_dir).join("MacOS");
+                    
+                    // Try different binary names
+                    let candidates = [
+                        macos_dir.join("xfactor-backend"),
+                        macos_dir.join("xfactor-backend-aarch64-apple-darwin"),
+                        macos_dir.join("xfactor-backend-x86_64-apple-darwin"),
+                    ];
+                    
+                    candidates.into_iter().find(|p| p.exists())
+                } else {
+                    None
+                };
+                
+                if let Some(backend) = backend_path {
+                    log::info!("Found backend at: {:?}", backend);
+                    
+                    match Command::new(&backend)
+                        .stdout(Stdio::piped())
+                        .stderr(Stdio::piped())
+                        .spawn()
+                    {
+                        Ok(child) => {
+                            log::info!("Backend started successfully (PID: {})", child.id());
+                            // Note: We're using std::process::Child here, not storing in BackendState
+                            // The child will be killed when dropped or when the app exits
+                        }
+                        Err(e) => {
+                            log::error!("Failed to spawn backend: {}", e);
+                        }
+                    }
+                } else {
+                    // Try the sidecar mechanism as fallback (for dev mode)
+                    match handle.shell().sidecar("xfactor-backend") {
+                        Ok(sidecar) => {
+                            match sidecar.spawn() {
+                                Ok((mut rx, child)) => {
+                                    log::info!("Backend sidecar started successfully");
+                                    
+                                    if let Some(state) = handle.try_state::<BackendState>() {
+                                        let mut guard = state.child.lock().unwrap();
+                                        *guard = Some(child);
+                                    }
+                                    
+                                    tauri::async_runtime::spawn(async move {
+                                        use tauri_plugin_shell::process::CommandEvent;
+                                        while let Some(event) = rx.recv().await {
+                                            match event {
+                                                CommandEvent::Stdout(line) => {
+                                                    log::info!("[Backend] {}", String::from_utf8_lossy(&line));
+                                                }
+                                                CommandEvent::Stderr(line) => {
+                                                    log::warn!("[Backend] {}", String::from_utf8_lossy(&line));
+                                                }
+                                                CommandEvent::Terminated(status) => {
+                                                    log::info!("[Backend] Process terminated: {:?}", status);
+                                                    break;
+                                                }
+                                                _ => {}
+                                            }
+                                        }
+                                    });
+                                }
+                                Err(e) => {
+                                    log::error!("Failed to spawn backend sidecar: {}", e);
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            log::warn!("Backend not found (dev mode?): {}", e);
+                        }
+                    }
+                }
+            });
 
             // Handle menu events
             app.on_menu_event(|app, event| {
@@ -255,11 +381,25 @@ pub fn run() {
             log::info!("XFactor Bot Desktop v{} started", env!("CARGO_PKG_VERSION"));
             Ok(())
         })
+        .on_window_event(|window, event| {
+            // Stop backend when app closes
+            if let tauri::WindowEvent::CloseRequested { .. } = event {
+                log::info!("Window closing, stopping backend...");
+                if let Some(state) = window.app_handle().try_state::<BackendState>() {
+                    let mut guard = state.child.lock().unwrap();
+                    if let Some(child) = guard.take() {
+                        let _ = child.kill();
+                        log::info!("Backend stopped on window close");
+                    }
+                }
+            }
+        })
         .invoke_handler(tauri::generate_handler![
             start_backend,
             stop_backend,
             get_system_info,
             show_notification,
+            check_backend_health,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

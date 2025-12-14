@@ -66,7 +66,7 @@ def create_app() -> FastAPI:
     )
     
     # Include routers
-    from src.api.routes import config, positions, orders, risk, news, admin, bots, ai, integrations, commodities, crypto, fees
+    from src.api.routes import config, positions, orders, risk, news, admin, bots, ai, integrations, commodities, crypto, fees, symbols, seasonal, optimizer, performance
     
     app.include_router(config.router, prefix="/api/config", tags=["Config"])
     app.include_router(positions.router, prefix="/api/positions", tags=["Positions"])
@@ -80,6 +80,10 @@ def create_app() -> FastAPI:
     app.include_router(commodities.router, prefix="/api/commodities", tags=["Commodities"])
     app.include_router(crypto.router, prefix="/api/crypto", tags=["Crypto"])
     app.include_router(fees.router, prefix="/api/fees", tags=["Fees"])
+    app.include_router(symbols.router, prefix="/api", tags=["Symbols"])  # Global symbol search
+    app.include_router(seasonal.router, tags=["Seasonal"])  # Seasonal events calendar
+    app.include_router(optimizer.router, tags=["Auto-Optimizer"])  # Bot auto-optimization
+    app.include_router(performance.router, tags=["Performance"])  # Performance charts & metrics
     
     @app.get("/api")
     async def api_root():
@@ -124,12 +128,16 @@ def create_app() -> FastAPI:
         # Mount static assets
         app.mount("/assets", StaticFiles(directory=str(frontend_dist / "assets")), name="assets")
         
-        # Serve index.html for root
+        # Serve index.html for root (no caching to ensure latest version)
         @app.get("/")
         async def serve_root():
             index_file = frontend_dist / "index.html"
             if index_file.exists():
-                return FileResponse(str(index_file), media_type="text/html")
+                response = FileResponse(str(index_file), media_type="text/html")
+                response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+                response.headers["Pragma"] = "no-cache"
+                response.headers["Expires"] = "0"
+                return response
             return {"error": "Frontend not built"}
         
         # Serve index.html for all non-API routes (SPA fallback)
@@ -141,7 +149,11 @@ def create_app() -> FastAPI:
             
             index_file = frontend_dist / "index.html"
             if index_file.exists():
-                return FileResponse(str(index_file), media_type="text/html")
+                response = FileResponse(str(index_file), media_type="text/html")
+                response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+                response.headers["Pragma"] = "no-cache"
+                response.headers["Expires"] = "0"
+                return response
             return {"error": "Frontend not built"}
         
         logger.info(f"📁 Serving frontend from {frontend_dist}")

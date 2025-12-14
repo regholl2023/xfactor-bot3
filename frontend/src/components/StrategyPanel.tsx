@@ -39,7 +39,7 @@ interface StrategySelect {
   category: string
 }
 
-type CategoryName = 'technical' | 'momentum' | 'sentiment' | 'ai' | 'social' | 'risk'
+type CategoryName = 'technical' | 'momentum' | 'sentiment' | 'ai' | 'social' | 'seasonal' | 'risk'
 
 // ============================================================================
 // Initial Strategy Configuration
@@ -71,6 +71,15 @@ const initialToggles: StrategyToggle[] = [
   { id: 'follow_insiders', name: 'Follow Insider Trades', description: 'Mirror SEC Form 4 filings', enabled: true, category: 'social', icon: <Building2 className="h-4 w-4" /> },
   { id: 'follow_top_traders', name: 'Follow Top Traders', description: 'Copy high win-rate traders', enabled: false, category: 'social', icon: <Users className="h-4 w-4" /> },
   { id: 'options_flow', name: 'Options Flow', description: 'Unusual options activity', enabled: true, category: 'social', icon: <Activity className="h-4 w-4" /> },
+  
+  // Seasonal & Calendar Events
+  { id: 'seasonal_enabled', name: 'Seasonal Events', description: 'Adjust for holidays & market cycles', enabled: true, category: 'seasonal', icon: <Clock className="h-4 w-4" /> },
+  { id: 'holiday_trading', name: 'Holiday Adjustments', description: 'Black Friday, Christmas, etc.', enabled: true, category: 'seasonal', icon: <Sparkles className="h-4 w-4" /> },
+  { id: 'earnings_season', name: 'Earnings Season Mode', description: 'Adjust for Q1-Q4 earnings', enabled: true, category: 'seasonal', icon: <Target className="h-4 w-4" /> },
+  { id: 'santa_rally', name: 'Santa Claus Rally', description: 'End-of-year bullish bias', enabled: true, category: 'seasonal', icon: <TrendingUp className="h-4 w-4" /> },
+  { id: 'january_effect', name: 'January Effect', description: 'Small cap January outperformance', enabled: true, category: 'seasonal', icon: <Activity className="h-4 w-4" /> },
+  { id: 'summer_doldrums', name: 'Summer Doldrums', description: 'Reduce activity Jul-Aug', enabled: true, category: 'seasonal', icon: <Gauge className="h-4 w-4" /> },
+  { id: 'tax_loss_harvesting', name: 'Tax-Loss Harvesting', description: 'Q4 tax selling patterns', enabled: true, category: 'seasonal', icon: <Shield className="h-4 w-4" /> },
 ]
 
 const initialSliders: StrategySlider[] = [
@@ -157,6 +166,7 @@ const categories: { id: CategoryName; name: string; icon: React.ReactNode; color
   { id: 'sentiment', name: 'News & Sentiment', icon: <Sparkles className="h-4 w-4" />, color: 'text-yellow-400' },
   { id: 'ai', name: 'AI & Machine Learning', icon: <Brain className="h-4 w-4" />, color: 'text-purple-400' },
   { id: 'social', name: 'Social Trading', icon: <Users className="h-4 w-4" />, color: 'text-orange-400' },
+  { id: 'seasonal', name: 'Seasonal Events', icon: <Clock className="h-4 w-4" />, color: 'text-cyan-400' },
   { id: 'risk', name: 'Risk Management', icon: <Shield className="h-4 w-4" />, color: 'text-red-400' },
 ]
 

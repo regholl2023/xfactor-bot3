@@ -61,3 +61,15 @@ export const getWsBaseUrl = (): string => {
 };
 
 export const isDesktopApp = isTauri;
+
+/**
+ * Helper function to construct API URLs.
+ * In Tauri, prepends localhost:9876 to relative paths.
+ * In browser, returns path as-is (handled by patched fetch).
+ */
+export const apiUrl = (path: string): string => {
+  if (isTauri && path.startsWith('/')) {
+    return `${DESKTOP_API_URL}${path}`;
+  }
+  return path;
+};

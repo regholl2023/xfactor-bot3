@@ -5,6 +5,13 @@ from src.strategies.technical import TechnicalStrategy
 from src.strategies.momentum import MomentumStrategy
 from src.strategies.mean_reversion import MeanReversionStrategy
 from src.strategies.news_sentiment import NewsSentimentStrategy
+from src.strategies.seasonal_events import (
+    SeasonalEventsCalendar,
+    SeasonalEvent,
+    Season,
+    MarketImpact,
+    get_seasonal_calendar,
+)
 
 __all__ = [
     "BaseStrategy",
@@ -14,5 +21,10 @@ __all__ = [
     "MomentumStrategy",
     "MeanReversionStrategy",
     "NewsSentimentStrategy",
+    "SeasonalEventsCalendar",
+    "SeasonalEvent",
+    "Season",
+    "MarketImpact",
+    "get_seasonal_calendar",
 ]
 

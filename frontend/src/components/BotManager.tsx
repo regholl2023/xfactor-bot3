@@ -4,8 +4,9 @@ import {
   ChevronDown, ChevronUp,
   Search, SortAsc, SortDesc, X, RefreshCw,
   Activity, TrendingUp, TrendingDown, Clock, AlertCircle, Target, BarChart3,
-  Lock, ShieldAlert
+  Lock, ShieldAlert, LineChart
 } from 'lucide-react'
+import { BotPerformanceChart } from './BotPerformanceChart'
 
 interface BotSummary {
   id: string
@@ -61,6 +62,7 @@ export function BotManager({ token = '' }: BotManagerProps) {
   const [showBotDetail, setShowBotDetail] = useState(false)
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [expandedBot, setExpandedBot] = useState<string | null>(null)
+  const [performanceBot, setPerformanceBot] = useState<{ id: string; name: string } | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [showAuthModal, setShowAuthModal] = useState(false)
@@ -473,9 +475,14 @@ export function BotManager({ token = '' }: BotManagerProps) {
                 <div className={`h-2 w-2 rounded-full ${getStatusColor(bot.status)}`} />
                 <div>
                   <button 
-                    onClick={() => fetchBotDetails(bot.id)}
-                    className="font-medium text-sm hover:text-primary hover:underline text-left"
+                    onClick={() => {
+                      fetchBotDetails(bot.id)
+                      setPerformanceBot({ id: bot.id, name: bot.name })
+                    }}
+                    className="font-medium text-sm hover:text-primary hover:underline text-left flex items-center gap-1"
+                    title="View bot details and performance"
                   >
+                    <LineChart className="h-3 w-3 text-muted-foreground" />
                     {bot.name}
                   </button>
                   <span className="text-xs text-muted-foreground ml-2">({bot.id})</span>
@@ -616,14 +623,22 @@ export function BotManager({ token = '' }: BotManagerProps) {
             </div>
             
             <div>
-              <label className="text-xs text-muted-foreground">Symbols (comma-separated)</label>
+              <label className="text-xs text-muted-foreground flex items-center gap-2">
+                Symbols (comma-separated)
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-xfactor-teal/20 text-xfactor-teal">
+                  40+ Global Exchanges
+                </span>
+              </label>
               <input
                 type="text"
                 value={newBotSymbols}
                 onChange={(e) => setNewBotSymbols(e.target.value)}
-                placeholder="SPY, QQQ, AAPL, MSFT, NVDA"
+                placeholder="AAPL, MSFT, 7203.T, HSBA.L, 9988.HK, TSM, SAP.DE..."
                 className="w-full mt-1 rounded bg-input px-3 py-2 text-sm border border-border"
               />
+              <p className="text-[10px] text-muted-foreground mt-1">
+                🌍 <strong>Any stock worldwide</strong> - Use exchange suffix for international: .L (London), .T (Tokyo), .HK (Hong Kong), .DE (Germany), .SS (Shanghai), .AX (Australia), .TO (Toronto), etc.
+              </p>
             </div>
             
             {/* AI Strategy Prompt */}
@@ -1030,6 +1045,19 @@ export function BotManager({ token = '' }: BotManagerProps) {
             </div>
           </div>
         </div>
+      )}
+      
+      {/* Bot Performance Chart Modal with Details */}
+      {performanceBot && (
+        <BotPerformanceChart
+          botId={performanceBot.id}
+          botName={performanceBot.name}
+          botDetails={selectedBot}
+          onClose={() => {
+            setPerformanceBot(null)
+            setSelectedBot(null)
+          }}
+        />
       )}
     </div>
   )

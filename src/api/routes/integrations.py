@@ -486,7 +486,11 @@ async def get_ainvest_signals(
                 "signal_type": s.signal_type,
                 "symbol": s.symbol,
                 "timestamp": s.timestamp.isoformat(),
-                "details": s.details,
+                "strength": s.strength,
+                "price": s.price,
+                "target_price": s.target_price,
+                "confidence": s.confidence,
+                "reasoning": s.reasoning,
             }
             for s in signals
         ]
@@ -507,13 +511,15 @@ async def get_ainvest_insider_trades(limit: int = 100) -> Dict[str, Any]:
         "count": len(trades),
         "trades": [
             {
-                "ticker": t.ticker,
+                "symbol": t.symbol,
                 "insider_name": t.insider_name,
-                "relation": t.relation,
-                "trade_type": t.trade_type,
+                "title": t.title,
+                "transaction_type": t.transaction_type,
                 "value": t.value,
                 "shares": t.shares,
-                "trade_date": t.trade_date.isoformat(),
+                "price": t.price,
+                "shares_owned_after": t.shares_owned_after,
+                "transaction_date": t.transaction_date.isoformat(),
                 "filing_date": t.filing_date.isoformat(),
             }
             for t in trades
@@ -572,7 +578,7 @@ async def get_ainvest_news(
                 "title": n.title,
                 "url": n.url,
                 "source": n.source,
-                "published_at": n.published_at.isoformat(),
+                "published_at": n.published.isoformat(),
                 "sentiment": n.sentiment,
                 "symbols": n.symbols,
             }

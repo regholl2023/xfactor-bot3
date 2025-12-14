@@ -2,8 +2,10 @@
 Momentum Trading Strategy.
 
 Identifies stocks with strong price momentum and follows the trend.
+Includes seasonal event awareness for holiday and calendar-based adjustments.
 """
 
+from datetime import datetime
 from typing import Optional, Any
 
 import pandas as pd
@@ -11,6 +13,7 @@ import pandas_ta as ta
 from loguru import logger
 
 from src.strategies.base_strategy import BaseStrategy, Signal, SignalType
+from src.strategies.seasonal_events import get_seasonal_calendar, SeasonalEventsCalendar
 from src.config.settings import get_settings
 
 
@@ -22,11 +25,21 @@ class MomentumStrategy(BaseStrategy):
     - Buy winners, sell losers
     - Relative strength ranking
     - Trend following with momentum confirmation
+    - Seasonal and holiday event adjustments
     """
     
-    def __init__(self, weight: float = 0.5):
-        """Initialize momentum strategy."""
+    def __init__(self, weight: float = 0.5, use_seasonal: bool = True):
+        """
+        Initialize momentum strategy.
+        
+        Args:
+            weight: Strategy weight in portfolio
+            use_seasonal: Whether to apply seasonal adjustments
+        """
         super().__init__(name="Momentum", weight=weight)
+        
+        self._use_seasonal = use_seasonal
+        self._seasonal_calendar = get_seasonal_calendar() if use_seasonal else None
         
         self._parameters = {
             # Lookback periods
@@ -49,6 +62,11 @@ class MomentumStrategy(BaseStrategy):
             
             # Risk
             "max_drawdown_from_high": 0.08,  # Exit if 8% below recent high
+            
+            # Seasonal settings
+            "use_seasonal_adjustments": True,
+            "seasonal_boost_max": 1.3,    # Max boost from seasonal events
+            "seasonal_reduce_max": 0.7,   # Max reduction from seasonal events
         }
     
     def get_parameters(self) -> dict[str, Any]:
@@ -87,12 +105,21 @@ class MomentumStrategy(BaseStrategy):
             # Check volume confirmation
             volume_confirms = self._check_volume(data)
             
+            # Get seasonal context (pulls current date automatically)
+            seasonal_context = self._get_seasonal_context(symbol)
+            
             # Generate signal
             signal_type, strength, confidence = self._generate_signal(
                 momentum_scores,
                 trend_strength,
                 volume_confirms,
             )
+            
+            # Apply seasonal adjustments
+            if self._use_seasonal and seasonal_context:
+                strength, confidence = self._apply_seasonal_adjustment(
+                    strength, confidence, signal_type, seasonal_context
+                )
             
             if signal_type == SignalType.HOLD:
                 return None
@@ -122,6 +149,7 @@ class MomentumStrategy(BaseStrategy):
                     "trend_strength": trend_strength,
                     "volume_confirms": volume_confirms,
                     "atr": atr,
+                    "seasonal_context": seasonal_context,
                 }
             )
             
@@ -260,6 +288,116 @@ class MomentumStrategy(BaseStrategy):
         if atr is not None and not atr.empty:
             return atr.iloc[-1]
         return data["close"].iloc[-1] * 0.02
+    
+    def _get_seasonal_context(self, symbol: str) -> Optional[dict]:
+        """
+        Get seasonal context for the current date.
+        
+        Pulls the current date and checks for active seasonal events
+        like Black Friday, Christmas, summer doldrums, etc.
+        """
+        if not self._seasonal_calendar:
+            return None
+        
+        try:
+            # Refresh to current date
+            self._seasonal_calendar.refresh_date()
+            context = self._seasonal_calendar.get_seasonal_context()
+            
+            # Determine sector for more targeted adjustments
+            sector = self._infer_sector(symbol)
+            if sector:
+                adjustment, events = self._seasonal_calendar.get_seasonal_adjustment(sector)
+                context["sector"] = sector
+                context["sector_adjustment"] = adjustment
+                context["sector_events"] = events
+            
+            return context
+            
+        except Exception as e:
+            logger.warning(f"Failed to get seasonal context: {e}")
+            return None
+    
+    def _infer_sector(self, symbol: str) -> Optional[str]:
+        """Infer sector from symbol for seasonal adjustments."""
+        # Common retail stocks
+        retail_symbols = {"WMT", "TGT", "COST", "HD", "LOW", "AMZN", "EBAY", "ETSY"}
+        if symbol.upper() in retail_symbols:
+            return "retail"
+        
+        # E-commerce
+        ecommerce_symbols = {"AMZN", "SHOP", "EBAY", "ETSY", "MELI", "JD", "BABA", "PDD"}
+        if symbol.upper() in ecommerce_symbols:
+            return "e-commerce"
+        
+        # Airlines/Travel
+        travel_symbols = {"AAL", "DAL", "UAL", "LUV", "ABNB", "BKNG", "EXPE", "MAR", "HLT"}
+        if symbol.upper() in travel_symbols:
+            return "travel"
+        
+        # Energy
+        energy_symbols = {"XOM", "CVX", "COP", "OXY", "SLB", "HAL", "EOG", "PXD"}
+        if symbol.upper() in energy_symbols:
+            return "energy"
+        
+        return None
+    
+    def _apply_seasonal_adjustment(
+        self,
+        strength: float,
+        confidence: float,
+        signal_type: SignalType,
+        seasonal_context: dict,
+    ) -> tuple[float, float]:
+        """
+        Apply seasonal adjustments to signal strength and confidence.
+        
+        Boosts signals during favorable seasonal periods (e.g., Black Friday for retail)
+        and reduces signals during unfavorable periods (e.g., September effect).
+        """
+        if not seasonal_context or not self._parameters.get("use_seasonal_adjustments", True):
+            return strength, confidence
+        
+        adjustment = seasonal_context.get("overall_adjustment", 1.0)
+        sector_adjustment = seasonal_context.get("sector_adjustment", 1.0)
+        
+        # Use sector-specific adjustment if available, otherwise overall
+        final_adjustment = sector_adjustment if sector_adjustment != 1.0 else adjustment
+        
+        # Clamp adjustment to configured limits
+        max_boost = self._parameters.get("seasonal_boost_max", 1.3)
+        max_reduce = self._parameters.get("seasonal_reduce_max", 0.7)
+        final_adjustment = max(max_reduce, min(max_boost, final_adjustment))
+        
+        # For bullish signals during bullish seasons, boost confidence
+        # For bullish signals during bearish seasons, reduce confidence
+        if signal_type.is_bullish:
+            if final_adjustment > 1.0:
+                # Favorable season - boost both
+                strength *= final_adjustment
+                confidence = min(0.95, confidence * (1 + (final_adjustment - 1) * 0.5))
+            else:
+                # Unfavorable season - reduce confidence
+                confidence *= final_adjustment
+        else:
+            # For bearish signals, inverse the adjustment
+            if final_adjustment < 1.0:
+                # Bearish season aligns with bearish signal - boost
+                strength *= (2 - final_adjustment)
+                confidence = min(0.95, confidence * (2 - final_adjustment))
+            else:
+                # Bullish season but bearish signal - reduce confidence
+                confidence /= final_adjustment
+        
+        # Log significant seasonal impacts
+        if abs(final_adjustment - 1.0) > 0.1:
+            active_events = [e["name"] for e in seasonal_context.get("active_events", [])]
+            logger.info(
+                f"Seasonal adjustment: {final_adjustment:.2f}x applied "
+                f"(events: {', '.join(active_events) if active_events else 'none'})"
+            )
+        
+        return strength, min(0.95, max(0.1, confidence))
     
     async def rank_symbols(
         self,

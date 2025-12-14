@@ -480,7 +480,22 @@ class BotInstance:
             self._emit("on_error", e)
         finally:
             if self._loop:
-                self._loop.close()
+                try:
+                    # Cancel any pending tasks
+                    pending = asyncio.all_tasks(self._loop)
+                    for task in pending:
+                        task.cancel()
+                    # Run until all tasks are cancelled
+                    if pending:
+                        self._loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
+                    # Stop the loop if running
+                    if self._loop.is_running():
+                        self._loop.stop()
+                    # Close the loop
+                    if not self._loop.is_closed():
+                        self._loop.close()
+                except Exception:
+                    pass  # Ignore errors during cleanup
     
     async def _run_async(self) -> None:
         """Main async trading loop."""

@@ -5,6 +5,108 @@ All notable changes to the XFactor Bot project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.4] - 2024-12-13
+
+### Fixed
+- **Sidecar Binary Bundling**: Fixed issue where backend binary was bundled without target-triple suffix
+  - Removed conflicting `resources` entry from Tauri config that was overwriting the correctly-named sidecar
+  - Cleaned up unnecessary `.app` bundle from binaries folder
+  - Backend binary now correctly bundled as `xfactor-backend-aarch64-apple-darwin` (or x64 equivalent)
+  - Desktop app should now properly auto-launch backend and show "Connected" status
+
+### Notes
+- x64 DMG requires Intel Mac for full functionality (backend cross-compilation not supported from ARM)
+- ARM64 DMG fully functional on Apple Silicon Macs
+
+## [0.9.3] - 2024-12-13
+
+### Added
+- **Auto-Tune UI**: Full user interface for automatic strategy optimization
+  - New "Auto-Tune" tab in bot details modal
+  - Mode selection: Conservative, Moderate, Aggressive with visual descriptions
+  - Live metrics display: Win Rate, Profit Factor, Max Drawdown
+  - Adjustments history with expandable list showing parameter changes
+  - Enable/Disable/Reset controls for each bot
+  - Real-time status updates every 30 seconds
+
+- **Seasonal Events UI**: Added to Strategy Controls panel
+  - New "Seasonal Events" category with dedicated toggles
+  - Holiday Adjustments toggle (Black Friday, Christmas, etc.)
+  - Earnings Season Mode toggle
+  - Santa Claus Rally toggle
+  - January Effect toggle
+  - Summer Doldrums toggle
+  - Tax-Loss Harvesting toggle
+
+- **Enhanced Bot Details**: Additional tracking metrics
+  - Win Rate display with color-coded thresholds
+  - Total P&L (lifetime) 
+  - Uptime display in the Performance Metrics section
+  - Error status section (shows green "No Errors" or red with count)
+  - Improved 3-column Performance Metrics grid
+
+### Changed
+- **Bot Performance Chart**: Now has 3 tabs (Performance, Details, Auto-Tune)
+- **Strategy Panel**: Added 7 new seasonal event toggles
+- **Release Structure**: All DMGs now organized under `releases/` folder
+
+### Fixed
+- **Event Loop Error**: Fixed "Cannot close a running event loop" in bot threading
+- **Async Coroutine Warning**: Fixed unawaited coroutine in BotAutoOptimizer.stop()
+- **Test Warnings**: Resolved all async-related test warnings
+
+## [0.9.2] - 2024-12-13
+
+### Changed
+- Version bump for internal testing
+
+## [0.9.1] - 2024-12-13
+
+### Added
+- **Auto-Optimizer for Trading Bots**: Automatic performance analysis and strategy adjustment
+  - Real-time performance monitoring (win rate, profit factor, drawdown, Sharpe ratio)
+  - Automatic parameter adjustment based on performance metrics
+  - Three optimization modes: Conservative (10% max), Moderate (20% max), Aggressive (35% max)
+  - Adjustable parameters: stop loss, take profit, position size, RSI levels, momentum thresholds
+  - Safety features: daily adjustment limits, cooldown periods, revert on worse performance
+  - Per-bot enable/disable with individual configuration
+  - API endpoints: `/api/optimizer/status`, `/api/optimizer/bot/{id}/enable`, `/api/optimizer/recommendations`
+  - Automatic baseline and best-performance tracking
+  - Trade-by-trade analysis with trend detection (improving/declining/neutral)
+
+- **Seasonal Events Calendar**: Holiday and calendar-based trading adjustments
+  - Automatic detection of seasonal events (Black Friday, Christmas, Santa Rally, etc.)
+  - Real-time date awareness for Momentum and Technical (Trend) strategies
+  - Holiday period detection (Black Friday, Cyber Monday, Valentine's Day, etc.)
+  - Earnings season awareness (Q1-Q4 reporting periods)
+  - Sector-specific adjustments (retail, e-commerce, travel, energy)
+  - Market patterns: Summer Doldrums, September Effect, Q4 Rally, January Effect
+  - Tax-related events: Tax Loss Harvesting, Post-Tax Deadline Rally
+  - API endpoints: `/api/seasonal/context`, `/api/seasonal/adjustment`, `/api/seasonal/events/active`
+  
+- **Desktop Installation Guide**: Comprehensive documentation for desktop app users
+  - Step-by-step installation for macOS, Windows, and Linux
+  - "Disconnected" status troubleshooting guide
+  - Manual backend setup instructions for developers
+  - Quick one-liner command for starting backend
+
+### Changed
+- **Bot Manager**: Now integrates with auto-optimizer for all 37 bots
+- **Momentum Strategy**: Now includes seasonal event awareness with automatic adjustments
+- **Technical Strategy**: Now includes seasonal event awareness for trend analysis
+
+### Fixed
+- **Server-side caching**: Added cache-busting headers to ensure latest frontend is always served
+- **Docker/Desktop conflict**: Resolved issue where stale Docker containers blocked fresh server startup
+- **Frontend serving**: Improved FastAPI static file serving with no-cache headers
+
+### Tests Added
+- **test_seasonal_events.py**: 24 tests for seasonal calendar, holiday detection, market patterns
+- **test_auto_optimizer.py**: 29 tests for performance analysis, parameter adjustment, optimization modes
+- **test_api_performance.py**: Tests for bot/position performance charts and sorting
+- **test_api_optimizer.py**: Tests for optimizer API endpoints (enable, disable, recommendations)
+- **test_api_seasonal.py**: Tests for seasonal API endpoints (context, adjustment, events)
+
 ## [0.9.0] - 2024-12-12
 
 ### Added
@@ -20,11 +122,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Multiple Broker Authentication Methods**: Easier connection for all user levels
   - **OAuth Login**: Schwab, Tradier - "Login with" button for secure browser auth
-  - **Username/Password**: Robinhood, Webull (Beta) - Familiar login with 2FA support
+  - **Username/Password**: Robinhood, Webull (Beta), IBKR - Familiar login with 2FA support
   - **API Keys**: Alpaca - Standard API key authentication
-  - **TWS Gateway**: IBKR - Professional trading platform integration
+  - **TWS Gateway**: IBKR - Professional trading platform integration (alternative to username/password)
   - Visual auth type indicators in broker selection
   - Beta badges for unofficial API integrations
+  - IBKR connection method toggle: Username/Password (Client Portal API) or TWS/Gateway
+
+- **37 Trading Bots Documentation**: Comprehensive draw.io diagram
+  - All 37 pre-configured bots documented with strategies
+  - Strategy permutation matrix showing usage patterns
+  - Bot categories: Stocks (10), Options (5), Futures (4), Leveraged ETF (2), Commodity (8), Crypto (8)
+  - Diagram at: `docs/xfactor-bot-37-bots-diagram.drawio`
+
+- **Global Stock Exchange Support**: Access to ALL stocks worldwide (~40,000+ symbols)
+  - 40+ global exchanges: NYSE, NASDAQ, LSE, TSE (Tokyo), HKEX, Shanghai, Shenzhen, TSX, ASX, and more
+  - Symbol search API: `/api/symbols/search?q=toyota` finds stocks across all exchanges
+  - Exchange suffixes supported: .L (London), .T (Tokyo), .HK (Hong Kong), .DE (Germany), .SS (Shanghai), .AX (Australia), .TO (Toronto), .PA (Paris), .MI (Milan), .NS (India), .KS (Korea), .TW (Taiwan), .SA (Brazil), .BA (Argentina), .MX (Mexico)
+  - Popular symbols endpoint: `/api/symbols/popular?category=international`
+  - Symbol validation: `/api/symbols/validate?symbols=AAPL,7203.T,HSBA.L`
+  - Exchange listing: `/api/symbols/exchanges` with trading hours, currencies, and stock counts
+  - Dynamic lookup via Yahoo Finance API for real-time symbol discovery
 
 - **Cross-Platform CI/CD**: Automated desktop builds
   - GitLab CI pipeline for all platforms

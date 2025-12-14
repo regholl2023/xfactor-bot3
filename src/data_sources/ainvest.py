@@ -108,6 +108,29 @@ class AInvestDataSource(BaseDataSource):
             self.http_client = None
         self.connected = False
         logger.info("Disconnected from AInvest")
+    
+    async def get_quote(self, symbol: str):
+        """Get real-time quote for a symbol.
+        
+        Note: AInvest focuses on AI analysis, not real-time quotes.
+        Returns None - use a market data source for quotes.
+        """
+        return None
+    
+    async def get_bars(
+        self,
+        symbol: str,
+        timeframe: str = "1d",
+        start=None,
+        end=None,
+        limit: int = 100
+    ):
+        """Get historical bars for a symbol.
+        
+        Note: AInvest focuses on AI analysis, not historical data.
+        Returns empty list - use a market data source for bars.
+        """
+        return []
         
     async def get_ai_recommendations(
         self, 
@@ -233,7 +256,7 @@ class AInvestDataSource(BaseDataSource):
                         title=item["title"],
                         url=item["url"],
                         source="AInvest",
-                        published_at=datetime.fromisoformat(item["published_at"]),
+                        published=datetime.fromisoformat(item["published_at"]),
                         sentiment=item.get("sentiment"),
                         symbols=item.get("symbols", []),
                         content=item.get("content")
@@ -281,8 +304,14 @@ class AInvestDataSource(BaseDataSource):
                         source="AInvest",
                         signal_type=item["signal_type"],
                         symbol=item["symbol"],
+                        strength=item.get("strength", 0.7),
+                        price=item.get("price", 0.0),
+                        target_price=item.get("target_price"),
+                        stop_loss=item.get("stop_loss"),
                         timestamp=datetime.fromisoformat(item["timestamp"]),
-                        details=item.get("details", {})
+                        confidence=item.get("confidence", 0.7),
+                        timeframe=item.get("timeframe", "1d"),
+                        reasoning=item.get("reasoning", "")
                     )
                     for item in data.get("signals", [])
                 ]
@@ -477,12 +506,13 @@ class AInvestDataSource(BaseDataSource):
             headline = random.choice(headlines).replace("{ticker}", ticker)
             results.append(NewsArticle(
                 title=headline,
+                summary=f"AI-powered analysis of {ticker}'s market activity and performance.",
                 url=f"https://ainvest.com/news/{ticker.lower()}-{i}",
                 source="AInvest",
-                published_at=datetime.now() - timedelta(hours=random.randint(0, 72)),
+                published=datetime.now() - timedelta(hours=random.randint(0, 72)),
                 sentiment=random.uniform(-0.5, 0.8),
                 symbols=[ticker],
-                content=None
+                relevance=random.uniform(0.6, 0.95),
             ))
             
         return results
@@ -500,16 +530,19 @@ class AInvestDataSource(BaseDataSource):
         results = []
         for i in range(limit):
             ticker = random.choice(tickers)
+            price = round(random.uniform(100, 600), 2)
             results.append(TradingSignal(
                 source="AInvest AI",
                 signal_type=random.choice(signal_types),
                 symbol=ticker,
+                strength=random.uniform(0.6, 0.95),
+                price=price,
+                target_price=round(price * 1.15, 2),
+                stop_loss=round(price * 0.95, 2),
                 timestamp=datetime.now() - timedelta(hours=random.randint(0, 24)),
-                details={
-                    "confidence": random.randint(70, 95),
-                    "ai_score": random.randint(60, 95),
-                    "price_target": round(random.uniform(100, 600), 2)
-                }
+                confidence=random.uniform(0.7, 0.95),
+                timeframe="1d",
+                reasoning=f"AI detected {random.choice(signal_types).lower()} pattern"
             ))
             
         return results
@@ -524,19 +557,22 @@ class AInvestDataSource(BaseDataSource):
         results = []
         for i in range(limit):
             ticker = random.choice(tickers)
-            trade_type = "Buy" if random.random() > 0.35 else "Sell"
+            transaction_type = "buy" if random.random() > 0.35 else "sell"
             shares = random.randint(10000, 500000)
-            price = random.uniform(100, 500)
+            price = round(random.uniform(100, 500), 2)
             
             results.append(InsiderTrade(
-                ticker=ticker,
+                symbol=ticker,
                 insider_name=f"{random.choice(['John', 'Jane', 'Robert', 'Sarah'])} {random.choice(['Smith', 'Johnson', 'Williams', 'Brown'])}",
-                relation=random.choice(names),
-                trade_type=trade_type,
-                value=round(shares * price, 2),
+                title=random.choice(names),
+                transaction_type=transaction_type,
                 shares=shares,
-                trade_date=datetime.now() - timedelta(days=random.randint(1, 30)),
-                filing_date=datetime.now() - timedelta(days=random.randint(0, 29))
+                price=price,
+                value=round(shares * price, 2),
+                shares_owned_after=random.randint(100000, 5000000),
+                transaction_date=datetime.now() - timedelta(days=random.randint(1, 30)),
+                filing_date=datetime.now() - timedelta(days=random.randint(0, 29)),
+                source="SEC"
             ))
             
         return results
@@ -566,6 +602,7 @@ class AInvestDataSource(BaseDataSource):
         return results
 
 
-# Register with data source registry
-DataSourceRegistry.register_data_source("ainvest", AInvestDataSource)
+# Note: Registration happens via get_data_source_registry() singleton
+# The registry instance should call:
+# registry.register_source_class(DataSourceType.AINVEST, AInvestDataSource)
 

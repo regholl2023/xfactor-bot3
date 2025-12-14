@@ -143,32 +143,26 @@ class TestBrokerRegistry:
 class TestAlpacaBroker:
     """Tests for Alpaca broker implementation."""
 
-    @patch('src.brokers.alpaca_broker.alpaca_trade_api')
-    def test_initialization(self, mock_alpaca):
+    def test_initialization(self):
         """Test Alpaca broker initialization."""
         try:
             from src.brokers.alpaca_broker import AlpacaBroker
-            broker = AlpacaBroker()
-            assert broker is not None
+            # Just verify import works
+            assert AlpacaBroker is not None
         except ImportError:
             pytest.skip("Alpaca broker not available")
-        except Exception:
-            # Expected if settings not configured
-            pass
 
-    @patch('src.brokers.alpaca_broker.alpaca_trade_api')
-    def test_connect_failure_handled(self, mock_alpaca):
-        """Test that connection failures are handled."""
+    def test_broker_has_required_methods(self):
+        """Test that AlpacaBroker has required methods."""
         try:
             from src.brokers.alpaca_broker import AlpacaBroker
-            broker = AlpacaBroker()
-            # Just verify broker can be instantiated
-            assert True
+            assert hasattr(AlpacaBroker, 'connect')
+            assert hasattr(AlpacaBroker, 'disconnect')
+            assert hasattr(AlpacaBroker, 'get_account_info')
+            assert hasattr(AlpacaBroker, 'get_positions')
+            assert hasattr(AlpacaBroker, 'submit_order')
         except ImportError:
             pytest.skip("Alpaca broker not available")
-        except Exception:
-            # Expected if settings not configured
-            pass
 
 
 class TestSchwabBroker:

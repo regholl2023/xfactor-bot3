@@ -9,6 +9,12 @@ from typing import Optional, Callable
 from loguru import logger
 
 from src.bot.bot_instance import BotInstance, BotConfig, BotStatus, InstrumentType
+from src.bot.auto_optimizer import (
+    get_auto_optimizer_manager,
+    BotAutoOptimizer,
+    OptimizationConfig,
+    OptimizationMode,
+)
 
 
 class BotManager:
@@ -16,10 +22,11 @@ class BotManager:
     Manager for multiple trading bot instances.
     
     Features:
-    - Create and manage up to 10 bot instances
+    - Create and manage up to 100 bot instances
     - Start/stop/pause individual bots
     - Monitor all bots status
     - Aggregate statistics
+    - Auto-optimization integration for dynamic parameter tuning
     """
     
     MAX_BOTS = 100  # Support for stocks, options, futures, crypto, and commodity bots
@@ -33,9 +40,13 @@ class BotManager:
             "on_bot_started": [],
             "on_bot_stopped": [],
             "on_bot_error": [],
+            "on_trade_completed": [],
         }
         
-        logger.info("Bot Manager initialized")
+        # Auto-optimizer integration
+        self._optimizer_manager = get_auto_optimizer_manager()
+        
+        logger.info("Bot Manager initialized with auto-optimizer support")
     
     @property
     def bot_count(self) -> int:
@@ -94,8 +105,14 @@ class BotManager:
             bot.register_callback("on_stop", lambda b: self._emit("on_bot_stopped", b))
             bot.register_callback("on_error", lambda b, e: self._emit("on_bot_error", b, e))
             
+            # Register trade callback for auto-optimizer
+            bot.register_callback("on_trade", lambda b, trade: self._on_trade_completed(b, trade))
+            
             self._bots[bot.id] = bot
             self._emit("on_bot_created", bot)
+            
+            # Register with auto-optimizer
+            self._register_bot_optimizer(bot)
             
             logger.info(f"Created bot {bot.id}: {config.name} ({self.bot_count}/{self.MAX_BOTS})")
             return bot
@@ -128,8 +145,101 @@ class BotManager:
                 bot.stop()
             
             del self._bots[bot_id]
+            
+            # Unregister from auto-optimizer
+            self._optimizer_manager.unregister_bot(bot_id)
+            
             logger.info(f"Deleted bot {bot_id}")
             return True
+    
+    def _register_bot_optimizer(self, bot: BotInstance) -> None:
+        """Register a bot with the auto-optimizer."""
+        def get_params() -> dict:
+            """Get current bot parameters - uses actual BotConfig fields."""
+            return {
+                "options_stop_loss_pct": getattr(bot.config, 'options_stop_loss_pct', 30.0),
+                "options_profit_target_pct": getattr(bot.config, 'options_profit_target_pct', 50.0),
+                "crypto_trailing_stop_pct": getattr(bot.config, 'crypto_trailing_stop_pct', 5.0),
+                "crypto_take_profit_pct": getattr(bot.config, 'crypto_take_profit_pct', 15.0),
+                "max_position_size": bot.config.max_position_size,
+                "max_positions": bot.config.max_positions,
+                "max_daily_loss_pct": bot.config.max_daily_loss_pct,
+                "news_sentiment_threshold": getattr(bot.config, 'news_sentiment_threshold', 0.5),
+                "trade_frequency_seconds": bot.config.trade_frequency_seconds,
+            }
+        
+        def set_params(params: dict) -> None:
+            """Set bot parameters - uses actual BotConfig fields."""
+            if "options_stop_loss_pct" in params:
+                bot.config.options_stop_loss_pct = params["options_stop_loss_pct"]
+            if "options_profit_target_pct" in params:
+                bot.config.options_profit_target_pct = params["options_profit_target_pct"]
+            if "crypto_trailing_stop_pct" in params:
+                bot.config.crypto_trailing_stop_pct = params["crypto_trailing_stop_pct"]
+            if "crypto_take_profit_pct" in params:
+                bot.config.crypto_take_profit_pct = params["crypto_take_profit_pct"]
+            if "max_position_size" in params:
+                bot.config.max_position_size = params["max_position_size"]
+            if "max_positions" in params:
+                bot.config.max_positions = params["max_positions"]
+            if "max_daily_loss_pct" in params:
+                bot.config.max_daily_loss_pct = params["max_daily_loss_pct"]
+            
+            logger.info(f"Bot {bot.id} parameters updated by auto-optimizer")
+        
+        self._optimizer_manager.register_bot(
+            bot_id=bot.id,
+            get_params=get_params,
+            set_params=set_params,
+        )
+    
+    def _on_trade_completed(self, bot: BotInstance, trade: dict) -> None:
+        """Handle trade completion - record for auto-optimizer."""
+        self._optimizer_manager.record_trade(bot.id, trade)
+        self._emit("on_trade_completed", bot, trade)
+    
+    async def enable_auto_optimization(
+        self,
+        bot_id: str,
+        mode: str = "moderate"
+    ) -> bool:
+        """
+        Enable auto-optimization for a bot.
+        
+        Args:
+            bot_id: Bot to optimize
+            mode: conservative, moderate, or aggressive
+            
+        Returns:
+            True if enabled successfully
+        """
+        try:
+            opt_mode = OptimizationMode(mode.lower())
+        except ValueError:
+            logger.error(f"Invalid optimization mode: {mode}")
+            return False
+        
+        return await self._optimizer_manager.enable_bot(bot_id, opt_mode)
+    
+    async def disable_auto_optimization(self, bot_id: str) -> bool:
+        """Disable auto-optimization for a bot."""
+        return await self._optimizer_manager.disable_bot(bot_id)
+    
+    def get_optimizer_status(self, bot_id: str = None) -> dict:
+        """
+        Get auto-optimizer status.
+        
+        Args:
+            bot_id: Specific bot or None for all
+        """
+        if bot_id:
+            optimizer = self._optimizer_manager.get_optimizer(bot_id)
+            return optimizer.get_status() if optimizer else {}
+        return self._optimizer_manager.get_all_status()
+    
+    def get_optimization_recommendations(self) -> list[dict]:
+        """Get optimization recommendations for all bots."""
+        return self._optimizer_manager.get_recommendations()
     
     def start_bot(self, bot_id: str) -> bool:
         """Start a specific bot."""
