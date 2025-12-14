@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build x64 backend using Rosetta"""
+"""Build x64 backend using Rosetta (for building x64 on ARM Mac)"""
 import os
 import sys
 import subprocess
@@ -10,7 +10,9 @@ PROJECT_ROOT = SCRIPT_DIR.parent.parent
 BINARIES_DIR = SCRIPT_DIR.parent / "src-tauri" / "binaries"
 
 def main():
-    print("Building x64 backend via Rosetta...")
+    print("=" * 60)
+    print("Building x64 backend via Rosetta")
+    print("=" * 60)
     
     # Ensure binaries dir exists
     BINARIES_DIR.mkdir(parents=True, exist_ok=True)
@@ -18,8 +20,6 @@ def main():
     output_name = "xfactor-backend-x86_64-apple-darwin"
     output_path = BINARIES_DIR / output_name
     
-    # Build using PyInstaller
-    spec_file = SCRIPT_DIR / "backend.spec"
     run_backend = SCRIPT_DIR / "run_backend.py"
     
     cmd = [
@@ -27,25 +27,72 @@ def main():
         "--onefile",
         "--name", output_name,
         "--distpath", str(BINARIES_DIR),
-        "--workpath", str(SCRIPT_DIR / "build_x64"),
-        "--specpath", str(SCRIPT_DIR),
+        "--workpath", str(SCRIPT_DIR.parent / "build"),
+        "--specpath", str(SCRIPT_DIR.parent / "build"),
+        # Hidden imports
+        "--hidden-import", "uvicorn.logging",
+        "--hidden-import", "uvicorn.loops",
+        "--hidden-import", "uvicorn.loops.auto",
+        "--hidden-import", "uvicorn.protocols",
+        "--hidden-import", "uvicorn.protocols.http",
+        "--hidden-import", "uvicorn.protocols.http.auto",
+        "--hidden-import", "uvicorn.protocols.websockets",
+        "--hidden-import", "uvicorn.protocols.websockets.auto",
+        "--hidden-import", "uvicorn.lifespan",
+        "--hidden-import", "uvicorn.lifespan.on",
+        "--hidden-import", "uvicorn.lifespan.off",
+        "--hidden-import", "fastapi",
+        "--hidden-import", "starlette",
+        "--hidden-import", "pydantic",
+        "--hidden-import", "pydantic_settings",
+        "--hidden-import", "httpx",
+        "--hidden-import", "websockets",
+        "--hidden-import", "aiohttp",
+        "--hidden-import", "pandas",
+        "--hidden-import", "pandas_ta",
+        "--hidden-import", "numpy",
+        "--hidden-import", "yfinance",
+        "--hidden-import", "alpaca_trade_api",
+        "--hidden-import", "sklearn",
+        "--hidden-import", "scipy",
+        # Exclude large unused packages
+        "--exclude-module", "tkinter",
+        "--exclude-module", "matplotlib",
+        "--exclude-module", "PIL",
+        "--exclude-module", "cv2",
+        "--exclude-module", "torch",
+        "--exclude-module", "tensorflow",
+        "--exclude-module", "transformers",
+        "--exclude-module", "keras",
+        "--exclude-module", "jax",
+        "--exclude-module", "flax",
+        "--exclude-module", "optax",
+        "--exclude-module", "IPython",
+        "--exclude-module", "jupyter",
+        "--exclude-module", "notebook",
+        # Clean build
         "--clean",
         "--noconfirm",
         str(run_backend)
     ]
     
-    print(f"Running: {' '.join(cmd[:6])}...")
-    result = subprocess.run(cmd, cwd=str(PROJECT_ROOT))
+    print(f"\nRunning: {' '.join(cmd[:8])}...")
+    os.chdir(PROJECT_ROOT)
+    result = subprocess.run(cmd)
     
     if result.returncode == 0 and output_path.exists():
         os.chmod(output_path, 0o755)
         size_mb = output_path.stat().st_size / (1024 * 1024)
-        print(f"✓ x64 backend built: {output_path}")
-        print(f"  Size: {size_mb:.1f} MB")
+        print(f"\n[OK] x64 backend built successfully!")
+        print(f"     Path: {output_path}")
+        print(f"     Size: {size_mb:.1f} MB")
     else:
-        print("✗ Build failed")
+        print("\n[ERROR] Build failed")
         return 1
     
+    print("\n" + "=" * 60)
+    print("x64 backend build complete!")
+    print("=" * 60)
     return 0
 
 if __name__ == "__main__":
