@@ -11,6 +11,9 @@ on:
         required: false
         default: 'v0.9.4'
 
+permissions:
+  contents: write  # Required to create releases
+
 jobs:
   build-macos-arm:
     name: Build macOS ARM64
@@ -239,7 +242,7 @@ jobs:
       - name: Build Tauri app (deb only)
         run: |
           cd desktop
-          npm run tauri build -- --bundles deb
+          npm run build:linux-deb
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
