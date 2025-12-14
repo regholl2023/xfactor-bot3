@@ -5,8 +5,8 @@ ib_insync>=0.9.86
 alpaca-py>=0.21.0
 
 # Data Processing
-pandas>=2.1.0,<2.3.0
-numpy>=1.26.0,<2.0.0
+pandas==2.2.2
+numpy==1.26.4
 polars>=0.20.0
 
 # Technical Analysis

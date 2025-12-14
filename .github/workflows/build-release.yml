@@ -40,12 +40,12 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          # Install numpy first with binary wheel only
-          pip install --only-binary :all: "numpy>=1.26.0,<2.0.0"
-          # Install pandas with binary wheel only to avoid compilation
-          pip install --only-binary :all: "pandas>=2.0.0,<2.3.0"
-          # Install rest of requirements
-          pip install -r requirements.txt
+          # Install specific versions with pre-built ARM64 wheels
+          pip install numpy==1.26.4 pandas==2.2.2 --only-binary :all:
+          # Verify numpy version
+          python -c "import numpy; print(f'NumPy version: {numpy.__version__}')"
+          # Install rest of requirements, skipping numpy/pandas since they're installed
+          pip install -r requirements.txt --no-deps || pip install -r requirements.txt
           pip install pyinstaller
 
       - name: Build Python backend
@@ -109,12 +109,12 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          # Install numpy first with binary wheel only
-          pip install --only-binary :all: "numpy>=1.26.0,<2.0.0"
-          # Install pandas with binary wheel only to avoid compilation
-          pip install --only-binary :all: "pandas>=2.0.0,<2.3.0"
+          # Install specific versions with pre-built Intel wheels
+          pip install numpy==1.26.4 pandas==2.2.2 --only-binary :all:
+          # Verify numpy version
+          python -c "import numpy; print(f'NumPy version: {numpy.__version__}')"
           # Install rest of requirements
-          pip install -r requirements.txt
+          pip install -r requirements.txt --no-deps || pip install -r requirements.txt
           pip install pyinstaller
 
       - name: Build Python backend
