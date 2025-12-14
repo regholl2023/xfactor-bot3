@@ -105,30 +105,54 @@ def main():
         # Collect all submodules for all key packages
         # Web framework
         "--collect-all", "uvicorn",
+        "--collect-all", "uvloop",
         "--collect-all", "fastapi",
         "--collect-all", "starlette",
         "--collect-all", "pydantic",
         "--collect-all", "pydantic_settings",
+        "--collect-all", "python_multipart",
         # HTTP/WebSocket clients
         "--collect-all", "httpx",
         "--collect-all", "httpcore",
+        "--collect-all", "h11",
         "--collect-all", "websockets",
         "--collect-all", "websocket",
         "--collect-all", "aiohttp",
+        "--collect-all", "aiosignal",
+        "--collect-all", "aiohappyeyeballs",
         "--collect-all", "requests",
         "--collect-all", "urllib3",
         # Data processing
         "--collect-all", "pandas",
         "--collect-all", "pandas_ta",
+        "--collect-all", "ta",
         "--collect-all", "numpy",
         "--collect-all", "polars",
+        # Trading
+        "--collect-all", "ib_insync",
+        # Database
+        "--collect-all", "sqlalchemy",
+        "--collect-all", "asyncpg",
+        "--collect-all", "redis",
         # Async
         "--collect-all", "anyio",
         "--collect-all", "sniffio",
+        "--collect-all", "nest_asyncio",
+        # Scheduling
+        "--collect-all", "apscheduler",
+        # Scraping/Parsing
+        "--collect-all", "beautifulsoup4",
+        "--collect-all", "bs4",
+        "--collect-all", "feedparser",
+        "--collect-all", "lxml",
         # Other utilities
         "--collect-all", "orjson",
         "--collect-all", "python_dotenv",
         "--collect-all", "loguru",
+        "--collect-all", "pytz",
+        "--collect-all", "dateutil",
+        "--collect-all", "certifi",
+        "--collect-all", "yaml",
         # Exclude large unused packages
         "--exclude-module", "tkinter",
         "--exclude-module", "matplotlib",
