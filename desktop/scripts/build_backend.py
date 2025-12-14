@@ -122,7 +122,12 @@ def main():
         "--hidden-import", "websockets",
         "--hidden-import", "aiohttp",
         "--hidden-import", "pandas",
+        "--hidden-import", "pandas_ta",
         "--hidden-import", "numpy",
+        "--hidden-import", "yfinance",
+        "--hidden-import", "alpaca_trade_api",
+        "--hidden-import", "sklearn",
+        "--hidden-import", "scipy",
         # Exclude large unused packages
         "--exclude-module", "tkinter",
         "--exclude-module", "matplotlib",
