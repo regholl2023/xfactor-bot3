@@ -12,13 +12,21 @@ An advanced algorithmic trading platform with multi-broker support, real-time ne
 - **Charles Schwab** - OAuth2 integration
 - **Tradier** - Low-cost options trading
 
-### Trading Bots (25 Max)
+### Trading Bots (100 Max)
 | Category | Bots | Description |
 |----------|------|-------------|
 | **Stock Bots** | 10 | Tech momentum, ETF swing, sector-specific |
 | **Options Bots** | 5 | SPY/QQQ calls, 0DTE scalping, earnings plays |
 | **Futures Bots** | 4 | ES/NQ scalping, micro futures |
 | **Leveraged ETF** | 2 | TQQQ/SQQQ and SOXL swing trading |
+| **Commodity Bots** | 8 | Gold, silver, oil, natural gas |
+| **Crypto Bots** | 8 | BTC, ETH, and altcoins |
+
+### Desktop Application
+- **macOS**: Apple Silicon (ARM64) and Intel (x64) DMG installers
+- **Windows**: MSI and EXE installers
+- **Linux**: DEB package
+- Auto-launches backend, system tray, native menus
 
 ### News & Sentiment Intelligence
 - 100+ global news sources (Reuters, Bloomberg, WSJ, Caixin, Nikkei, etc.)
@@ -136,9 +144,16 @@ PLAID_SECRET=your_secret
 PLAID_ENVIRONMENT=sandbox
 ```
 
-### AI
+### AI (Multiple Providers Supported)
 ```env
+# OpenAI
 OPENAI_API_KEY=your_key
+
+# Anthropic Claude
+ANTHROPIC_API_KEY=your_key
+
+# Ollama (local, no key needed)
+OLLAMA_HOST=http://localhost:11434
 ```
 
 ## 🏗️ Architecture
@@ -189,7 +204,9 @@ OPENAI_API_KEY=your_key
 
 ## 🚧 Roadmap
 
-- [ ] Desktop app (Electron) for 24/7 local operation
+- [x] Desktop app (Tauri) for 24/7 local operation
+- [x] Cross-platform builds (macOS ARM64/x64, Windows, Linux)
+- [x] Multiple AI provider support (OpenAI, Claude, Ollama)
 - [ ] Helium 10 integration (pending API availability)
 - [ ] Additional crypto exchange support
 - [ ] Mobile app

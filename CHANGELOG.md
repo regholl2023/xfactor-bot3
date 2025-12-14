@@ -5,6 +5,27 @@ All notable changes to the XFactor Bot project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.5] - 2024-12-14
+
+### Added
+- **Hypothesis Testing Framework**: Added `hypothesis>=6.0.0` for property-based testing
+- **API-Based LLM Strategy**: Shifted from bundled PyTorch/Transformers to API-based LLMs
+  - OpenAI (GPT-4, GPT-3.5) - API key required
+  - Anthropic Claude - API key required
+  - Ollama (local) - Free, runs locally
+  - Configurable via Admin Panel
+
+### Changed
+- **Smaller Desktop Bundle**: Removed torch/transformers from PyInstaller bundle
+  - Reduces app size from ~2GB to ~200MB
+  - More reliable cross-platform builds
+  - AI features work via API calls instead of local inference
+- **GitHub Actions**: Linux build now included in release if successful
+
+### Fixed
+- **NumPy 2.x Compatibility**: Pinned numpy<2.0.0 in requirements.txt
+- **PyInstaller Bundling**: Comprehensive `--collect-all` for all dependencies
+
 ## [0.9.4] - 2024-12-13
 
 ### Fixed
