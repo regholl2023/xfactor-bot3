@@ -64,13 +64,18 @@ jobs:
       - name: Build Tauri app
         run: |
           cd desktop
-          npm run build:mac-arm
+          npm run tauri build -- --target aarch64-apple-darwin --bundles app
+
+      - name: Create DMG manually
+        run: |
+          cd desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/macos
+          hdiutil create -volname "XFactor Bot" -srcfolder "XFactor Bot.app" -ov -format UDZO "XFactor_Bot_0.9.4_aarch64.dmg"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: macos-arm64-dmg
-          path: desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
+          path: desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/macos/*.dmg
 
   build-macos-intel:
     name: Build macOS Intel
@@ -121,13 +126,18 @@ jobs:
       - name: Build Tauri app
         run: |
           cd desktop
-          npm run build:mac-intel
+          npm run tauri build -- --target x86_64-apple-darwin --bundles app
+
+      - name: Create DMG manually
+        run: |
+          cd desktop/src-tauri/target/x86_64-apple-darwin/release/bundle/macos
+          hdiutil create -volname "XFactor Bot" -srcfolder "XFactor Bot.app" -ov -format UDZO "XFactor_Bot_0.9.4_x64.dmg"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: macos-intel-dmg
-          path: desktop/src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/*.dmg
+          path: desktop/src-tauri/target/x86_64-apple-darwin/release/bundle/macos/*.dmg
 
   build-windows:
     name: Build Windows
