@@ -7,7 +7,7 @@ interface HelpModalProps {
 }
 
 const VERSION = '0.9.5';
-const RELEASE_DATE = 'December 14, 2024';
+const RELEASE_DATE = 'December 15, 2025';
 
 const features = [
   {
@@ -63,8 +63,9 @@ const quickStart = [
 const changelog = [
   {
     version: '0.9.5',
-    date: 'December 14, 2024',
+    date: 'December 15, 2025',
     changes: [
+      'Help popup with features, quick start, and changelog',
       'API-based LLM support (OpenAI, Anthropic, Ollama)',
       'Replaced pandas-ta with ta library for NumPy compatibility',
       'Cross-platform desktop builds (macOS ARM64/Intel, Windows, Linux)',
@@ -73,7 +74,7 @@ const changelog = [
   },
   {
     version: '0.9.4',
-    date: 'December 13, 2024',
+    date: 'December 13, 2025',
     changes: [
       'Fixed sidecar binary bundling for desktop app',
       'Backend auto-launch improvements'
@@ -81,7 +82,7 @@ const changelog = [
   },
   {
     version: '0.9.3',
-    date: 'December 13, 2024',
+    date: 'December 13, 2025',
     changes: [
       'Auto-Tune UI for automatic strategy optimization',
       'Seasonal Events UI in Strategy Controls',
@@ -90,7 +91,7 @@ const changelog = [
   },
   {
     version: '0.9.0',
-    date: 'December 12, 2024',
+    date: 'December 12, 2025',
     changes: [
       'Desktop application with Tauri',
       'Multiple broker authentication methods',
@@ -231,7 +232,7 @@ export default function HelpModal({ isOpen, onClose }: HelpModalProps) {
         <div className="px-6 py-4 border-t border-slate-700 bg-slate-800/50">
           <div className="flex items-center justify-between">
             <p className="text-sm text-slate-400">
-              © 2024 XFactor Trading • AI-Powered Automated Trading System
+              © 2025 XFactor Trading • AI-Powered Automated Trading System
             </p>
             <div className="flex items-center gap-2">
               <span className="px-2 py-1 bg-green-500/20 text-green-400 text-xs rounded">
