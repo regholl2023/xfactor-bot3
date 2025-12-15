@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { Pause, Power, Play, Lock, ShieldAlert, X } from 'lucide-react'
+import { Pause, Power, Play, Lock, ShieldAlert, HelpCircle } from 'lucide-react'
 import { TradingModeSelector } from './TradingModeSelector'
 import { useAuth } from '../context/AuthContext'
+import HelpModal from './HelpModal'
 
 type WSState = 'connecting' | 'connected' | 'disconnected' | 'error'
 
@@ -14,6 +15,7 @@ export function Header({ connected, wsState = 'disconnected' }: HeaderProps) {
   const { isAuthenticated, token } = useAuth()
   const [logoError, setLogoError] = useState(false)
   const [showAuthModal, setShowAuthModal] = useState(false)
+  const [showHelpModal, setShowHelpModal] = useState(false)
   const [isPaused, setIsPaused] = useState(false)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
 
@@ -143,6 +145,16 @@ export function Header({ connected, wsState = 'disconnected' }: HeaderProps) {
                 <Power className="h-4 w-4" />
                 Kill Switch
               </button>
+              
+              {/* Help Button */}
+              <button 
+                onClick={() => setShowHelpModal(true)}
+                className="flex items-center gap-2 rounded-lg bg-blue-500/20 border border-blue-500/30 px-4 py-2 text-sm text-blue-400 hover:bg-blue-500/30 hover:text-blue-300 transition-all"
+                title="Help & Documentation"
+              >
+                <HelpCircle className="h-4 w-4" />
+                Help
+              </button>
             </div>
           </div>
         </div>
@@ -201,6 +213,9 @@ export function Header({ connected, wsState = 'disconnected' }: HeaderProps) {
           </div>
         </div>
       )}
+
+      {/* Help Modal */}
+      <HelpModal isOpen={showHelpModal} onClose={() => setShowHelpModal(false)} />
     </>
   )
 }
