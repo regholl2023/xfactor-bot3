@@ -3,6 +3,7 @@ import { Lock, Unlock, Power, AlertTriangle, Check, X, Eye, EyeOff, Bot, Buildin
 import { BotManager } from './BotManager'
 import { BrokerConfig } from './BrokerConfig'
 import { useAuth } from '../context/AuthContext'
+import RestrictedFeature from './RestrictedFeature'
 
 interface Feature {
   feature: string
@@ -235,7 +236,12 @@ export function AdminPanel() {
       
       {/* Broker Config Tab */}
       {activeTab === 'broker' && (
-        <BrokerConfig />
+        <RestrictedFeature 
+          feature="broker" 
+          message="Broker connections are disabled in demo mode. Enter password to unlock."
+        >
+          <BrokerConfig />
+        </RestrictedFeature>
       )}
       
       {/* Bot Manager Tab */}

@@ -4,6 +4,8 @@ import { Header } from './components/Header'
 import { AIAssistant } from './components/AIAssistant'
 import { AuthProvider } from './context/AuthContext'
 import { TradingModeProvider } from './context/TradingModeContext'
+import { DemoModeProvider } from './contexts/DemoModeContext'
+import DemoModeBanner from './components/DemoModeBanner'
 import { getWsBaseUrl } from './config/api'
 
 // WebSocket connection states
@@ -199,17 +201,20 @@ function App() {
   }, [connect])
 
   return (
-    <AuthProvider>
-      <TradingModeProvider>
-        <div className="min-h-screen bg-background">
-          <Header connected={connected} wsState={wsState} />
-          <main className="container mx-auto p-4">
-            <Dashboard />
-          </main>
-          <AIAssistant />
-        </div>
-      </TradingModeProvider>
-    </AuthProvider>
+    <DemoModeProvider>
+      <AuthProvider>
+        <TradingModeProvider>
+          <div className="min-h-screen bg-background">
+            <DemoModeBanner />
+            <Header connected={connected} wsState={wsState} />
+            <main className="container mx-auto p-4">
+              <Dashboard />
+            </main>
+            <AIAssistant />
+          </div>
+        </TradingModeProvider>
+      </AuthProvider>
+    </DemoModeProvider>
   )
 }
 
