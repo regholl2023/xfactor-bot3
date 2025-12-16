@@ -61,14 +61,18 @@ jobs:
         if: matrix.platform == 'ubuntu-22.04'
         run: |
           sudo apt-get update
+          # Remove conflicting package if present
+          sudo apt-get remove -y libappindicator3-dev 2>/dev/null || true
+          # Install dependencies (use ayatana instead of deprecated libappindicator3)
           sudo apt-get install -y \
             libwebkit2gtk-4.1-dev \
-            libappindicator3-dev \
             librsvg2-dev \
             patchelf \
             libssl-dev \
             libgtk-3-dev \
-            libayatana-appindicator3-dev
+            libfuse2
+          # Install ayatana separately (ignore if fails)
+          sudo apt-get install -y libayatana-appindicator3-dev 2>/dev/null || true
 
       - name: Install frontend dependencies
         run: |
