@@ -1,5 +1,12 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
+// Declare Tauri global for TypeScript
+declare global {
+  interface Window {
+    __TAURI__?: unknown;
+  }
+}
+
 interface DemoModeContextType {
   isDemoMode: boolean;
   isUnlocked: boolean;
@@ -9,25 +16,38 @@ interface DemoModeContextType {
 
 const DemoModeContext = createContext<DemoModeContextType | undefined>(undefined);
 
-// Check if running in demo mode (GitLab build)
+// Check if running in demo mode (GitLab/NVIDIA internal build)
 const checkDemoMode = (): boolean => {
   // Demo mode is enabled if:
   // 1. VITE_DEMO_MODE env var is set to 'true'
-  // 2. Or running from GitLab Pages (check URL)
+  // 2. Or running from NVIDIA GitLab (gitlab-master.nvidia.com)
+  // 3. Or running from any GitLab instance
   const envDemoMode = import.meta.env.VITE_DEMO_MODE === 'true';
-  const isGitLabPages = window.location.hostname.includes('gitlab.io') || 
-                        window.location.hostname.includes('gitlab.com');
   
-  // For localhost and GitHub, demo mode is OFF by default
-  const isLocalhost = window.location.hostname === 'localhost' || 
-                      window.location.hostname === '127.0.0.1';
-  const isGitHub = window.location.hostname.includes('github.io');
+  const hostname = window.location.hostname;
   
-  if (isLocalhost || isGitHub) {
-    return false; // Full features on localhost and GitHub
+  // NVIDIA GitLab - DEMO MODE (restricted)
+  const isNvidiaGitLab = hostname.includes('nvidia.com') || 
+                         hostname.includes('gitlab-master');
+  
+  // Public GitLab - DEMO MODE (restricted)
+  const isPublicGitLab = hostname.includes('gitlab.io') || 
+                         hostname.includes('gitlab.com');
+  
+  // Full features environments (NO restrictions)
+  const isLocalhost = hostname === 'localhost' || 
+                      hostname === '127.0.0.1';
+  const isGitHub = hostname.includes('github.io') || 
+                   hostname.includes('github.com');
+  const isTauriDesktop = window.__TAURI__ !== undefined;
+  
+  // Full features on: localhost, GitHub, and Tauri desktop app
+  if (isLocalhost || isGitHub || isTauriDesktop) {
+    return false; // Full features - NO demo mode
   }
   
-  return envDemoMode || isGitLabPages;
+  // Demo mode on: NVIDIA GitLab, public GitLab, or if env var is set
+  return envDemoMode || isNvidiaGitLab || isPublicGitLab;
 };
 
 // The unlock password - in production, this should be more secure
