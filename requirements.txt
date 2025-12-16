@@ -32,7 +32,7 @@ websockets>=12.0
 httpx>=0.26.0
 aiohttp>=3.9.0
 beautifulsoup4>=4.12.0
-playwright>=1.41.0
+# playwright>=1.41.0  # Optional - requires browser binaries
 feedparser>=6.0.10
 
 # AI/LLM Providers (configurable in admin panel)
@@ -72,7 +72,7 @@ cachetools>=5.3.0
 praw>=7.7.1
 
 # Banking Integration
-plaid-python>=15.0.0
+# plaid-python>=15.0.0  # Optional - uncomment if using Plaid
 
 # Market Data
 yfinance>=0.2.36

@@ -7,7 +7,7 @@
     "frontendDist": "../../frontend/dist",
     "devUrl": "http://localhost:5173",
     "beforeDevCommand": "cd ../frontend && npm run dev",
-    "beforeBuildCommand": "cd ../frontend && npm run build && cd ../desktop/scripts && python3 build_backend.py"
+    "beforeBuildCommand": ""
   },
   "app": {
     "windows": [
@@ -52,7 +52,7 @@
     "category": "Finance",
     "shortDescription": "AI-Powered Automated Trading System",
     "longDescription": "XFactor Bot is an intelligent trading platform featuring backtesting, ML-based strategy optimization, portfolio rebalancing, tax-loss harvesting, and multi-account support.",
-    "copyright": "© 2024 XFactor Trading",
+    "copyright": "© 2025 XFactor Trading",
     "macOS": {
       "entitlements": null,
       "exceptionDomain": null,
