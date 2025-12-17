@@ -139,24 +139,22 @@ jobs:
         run: |
           echo "Machine: $(uname -m)"
           echo "Python arch: $(python -c 'import platform; print(platform.machine())')"
-          # If on ARM, install x86_64 Python via Rosetta
-          if [ "$(uname -m)" = "arm64" ]; then
-            echo "Running on ARM64, will use arch -x86_64 for Intel build"
-          fi
 
-      - name: Build Python backend
-        env:
-          MACOSX_DEPLOYMENT_TARGET: '10.15'
+      - name: Download pre-built backend (Big Sur compatible)
         run: |
-          cd desktop/scripts
-          # Use arch -x86_64 to force Intel architecture if on ARM
-          if [ "$(uname -m)" = "arm64" ]; then
-            arch -x86_64 python build_backend.py
-          else
-            python build_backend.py
-          fi
-          # Verify binary was created
-          ls -la ../src-tauri/binaries/
+          # Download pre-built backend from GitHub release (built on Big Sur for compatibility)
+          mkdir -p desktop/src-tauri/binaries
+          cd desktop/src-tauri/binaries
+          
+          # Download the pre-built binary from the legacy-backend release
+          curl -L -o xfactor-backend-x86_64-apple-darwin \
+            "https://github.com/Channarith/xfactor-bot/releases/download/v0.9.7-legacy-backend/xfactor-backend-x86_64-apple-darwin"
+          
+          chmod +x xfactor-backend-x86_64-apple-darwin
+          
+          echo "=== Downloaded pre-built backend ==="
+          ls -la
+          file xfactor-backend-x86_64-apple-darwin
 
       - name: Install frontend dependencies
         run: |
