@@ -30,6 +30,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Tries multiple binary names (with/without architecture suffix)
 - **"Failed to fetch bots" on legacy Mac**: Better error diagnostics
 - **Admin panel accessibility**: Always accessible regardless of backend status
+- **Backend Not Killed on UI Reload**: Refactored cleanup into soft/hard modes
+  - Soft cleanup (component unmount): Only clears WebSocket and intervals, keeps backend alive
+  - Hard cleanup (app close): Full cleanup including stopping bots and killing backend
+  - Prevents unintended backend termination during React re-renders
+- **Detached Backend Process**: Backend now starts as detached process on all platforms
+  - Uses `setsid` on Unix, `DETACHED_PROCESS` on Windows
+  - Backend survives unexpected frontend crashes
+- **Rate-Limited Reconnection**: WebSocket uses exponential backoff with jitter
+  - Fast retries (1s, 2s, 4s, 8s, 16s) for first 5 attempts
+  - Then settles at 30s intervals for continuous background checking
+  - Background health check every 15s when disconnected
 
 ## [0.9.6] - 2025-12-16
 
