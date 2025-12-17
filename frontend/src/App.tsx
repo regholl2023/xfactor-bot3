@@ -33,38 +33,13 @@ function App() {
     healthCheckInterval: 15000, // Check backend health every 15 seconds when disconnected
   }
 
-  // Cleanup function for graceful shutdown
-  const performCleanup = useCallback(async () => {
-    if (cleanupDone.current) return
-    cleanupDone.current = true
-    
-    console.log('Performing cleanup before exit...')
-    
-    // Send cleanup signal via WebSocket if connected
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      try {
-        wsRef.current.send(JSON.stringify({ type: 'cleanup' }))
-      } catch (e) {
-        console.warn('Failed to send cleanup signal:', e)
-      }
-    }
-    
-    // Stop all bots via API
-    try {
-      const response = await fetch(`${getApiBaseUrl()}/api/bots/stop-all`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      })
-      if (response.ok) {
-        console.log('All bots stopped successfully')
-      }
-    } catch (e) {
-      console.warn('Failed to stop bots:', e)
-    }
+  // Soft cleanup - for component unmount (DON'T kill backend)
+  const performSoftCleanup = useCallback(() => {
+    console.log('[Cleanup] Soft cleanup - clearing intervals and WebSocket only')
     
     // Close WebSocket cleanly
     if (wsRef.current) {
-      wsRef.current.close(1000, 'Application closing')
+      wsRef.current.close(1000, 'Component cleanup')
       wsRef.current = null
     }
     
@@ -81,20 +56,57 @@ function App() {
       clearTimeout(reconnectTimeoutRef.current)
       reconnectTimeoutRef.current = null
     }
+  }, [])
+
+  // Hard cleanup - ONLY for actual app/window close (kills backend)
+  const performHardCleanup = useCallback(async (reason: string) => {
+    if (cleanupDone.current) {
+      console.log('[Cleanup] Already cleaned up, skipping')
+      return
+    }
+    cleanupDone.current = true
     
-    // If in Tauri, invoke force cleanup
-    if (isTauri) {
+    console.log(`[Cleanup] Hard cleanup triggered: ${reason}`)
+    
+    // Send cleanup signal via WebSocket if connected
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
       try {
-        const { invoke } = await import('@tauri-apps/api/core')
-        await invoke('force_cleanup')
-        console.log('Tauri cleanup completed')
+        wsRef.current.send(JSON.stringify({ type: 'cleanup' }))
       } catch (e) {
-        console.warn('Tauri cleanup failed:', e)
+        console.warn('[Cleanup] Failed to send cleanup signal:', e)
       }
     }
     
-    console.log('Cleanup completed')
-  }, [])
+    // Stop all bots via API
+    try {
+      const response = await fetch(`${getApiBaseUrl()}/api/bots/stop-all`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+      if (response.ok) {
+        console.log('[Cleanup] All bots stopped successfully')
+      }
+    } catch (e) {
+      console.warn('[Cleanup] Failed to stop bots:', e)
+    }
+    
+    // Soft cleanup first
+    performSoftCleanup()
+    
+    // ONLY kill backend if in Tauri AND this is a real app close
+    if (isTauri) {
+      try {
+        console.log('[Cleanup] Invoking Tauri force_cleanup...')
+        const { invoke } = await import('@tauri-apps/api/core')
+        await invoke('force_cleanup')
+        console.log('[Cleanup] Tauri cleanup completed')
+      } catch (e) {
+        console.warn('[Cleanup] Tauri cleanup failed:', e)
+      }
+    }
+    
+    console.log('[Cleanup] Hard cleanup completed')
+  }, [performSoftCleanup])
 
   // Exponential backoff for reconnection with rate limiting
   const getReconnectDelay = useCallback(() => {
@@ -327,31 +339,28 @@ function App() {
       connect()
     }
     
-    // Handle browser/tab close
+    // Handle browser/tab close - HARD cleanup (kills backend)
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      // Synchronous cleanup for browser close
-      performCleanup()
-      // Optional: Show confirmation dialog (most browsers ignore this now)
-      // e.preventDefault()
-      // e.returnValue = ''
+      console.log('[App] Browser/tab closing - triggering hard cleanup')
+      performHardCleanup('browser/tab close')
     }
     
     // Handle Tauri window close events
     let unlistenTauriClose: (() => void) | null = null
     if (isTauri) {
       import('@tauri-apps/api/event').then(({ listen }) => {
-        // Listen for window close request
+        // Listen for window close request - HARD cleanup
         listen('tauri://close-requested', async () => {
-          console.log('Tauri window close requested')
-          await performCleanup()
+          console.log('[App] Tauri window close requested - triggering hard cleanup')
+          await performHardCleanup('window close')
         }).then(unlisten => {
           unlistenTauriClose = unlisten
         })
         
-        // Listen for kill switch from menu
+        // Listen for kill switch from menu - HARD cleanup
         listen('kill-switch', async () => {
-          console.log('Kill switch activated!')
-          await performCleanup()
+          console.log('[App] Kill switch activated - triggering hard cleanup')
+          await performHardCleanup('kill switch')
         })
       }).catch(console.error)
     }
@@ -370,23 +379,12 @@ function App() {
         unlistenTauriClose()
       }
       
-      if (heartbeatInterval.current) {
-        clearInterval(heartbeatInterval.current)
-      }
-      if (healthCheckInterval.current) {
-        clearInterval(healthCheckInterval.current)
-      }
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current)
-      }
-      if (wsRef.current) {
-        wsRef.current.close(1000, 'Component unmounting')
-      }
-      
-      // Final cleanup on unmount
-      performCleanup()
+      // SOFT cleanup on unmount - DON'T kill backend!
+      // This can happen during React re-renders or hot reload
+      console.log('[App] Component unmounting - soft cleanup only (keeping backend alive)')
+      performSoftCleanup()
     }
-  }, [connect, performCleanup])
+  }, [connect, performHardCleanup, performSoftCleanup])
 
   return (
     <DemoModeProvider>
