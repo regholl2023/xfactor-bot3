@@ -43,9 +43,31 @@ impl Default for BackendState {
     }
 }
 
+/// Check if backend is already running by testing the health endpoint
+fn is_backend_running() -> bool {
+    // Try to connect to the backend health endpoint
+    // Using a simple TCP connection check first (faster than HTTP)
+    use std::net::TcpStream;
+    
+    match TcpStream::connect_timeout(
+        &"127.0.0.1:9876".parse().unwrap(),
+        Duration::from_millis(500)
+    ) {
+        Ok(_) => {
+            log::info!("Backend is already running on port 9876");
+            true
+        }
+        Err(_) => {
+            log::info!("No backend detected on port 9876");
+            false
+        }
+    }
+}
+
 /// Kill any zombie xfactor-backend processes
+/// NOTE: This is ONLY called during shutdown/cleanup, NOT on startup
 fn kill_zombie_backends() {
-    log::info!("Checking for zombie backend processes...");
+    log::info!("Cleaning up backend processes...");
     
     #[cfg(unix)]
     {
@@ -57,7 +79,7 @@ fn kill_zombie_backends() {
             let pids = String::from_utf8_lossy(&output.stdout);
             for pid in pids.lines() {
                 if let Ok(pid_num) = pid.trim().parse::<u32>() {
-                    log::info!("Killing zombie backend process: {}", pid_num);
+                    log::info!("Killing backend process: {}", pid_num);
                     let _ = Command::new("kill")
                         .args(["-9", &pid_num.to_string()])
                         .output();
@@ -166,18 +188,22 @@ async fn start_backend(app: tauri::AppHandle, state: tauri::State<'_, BackendSta
         return Err("Application is shutting down".to_string());
     }
     
-    // Check if already running
+    // Check if already running (tracked child)
     {
         let guard = state.child.lock().unwrap();
         if guard.is_some() {
-            return Ok("Backend already running".to_string());
+            return Ok("Backend already running (tracked)".to_string());
         }
     }
     
-    // Clean up any zombie processes first
-    kill_zombie_backends();
+    // Check if backend is already running externally (e.g., from previous session or manual start)
+    // DON'T kill it - just reuse it
+    if is_backend_running() {
+        log::info!("Backend already running externally, reusing existing instance");
+        return Ok("Backend already running (external)".to_string());
+    }
     
-    // Spawn the sidecar backend
+    // No backend running - spawn a new one
     let sidecar = app.shell()
         .sidecar("xfactor-backend")
         .map_err(|e| format!("Failed to create sidecar command: {}", e))?;
@@ -497,28 +523,79 @@ pub fn run() {
                     exists
                 });
                 
-                if let Some(backend) = backend_path {
-                    log::info!("Found backend at: {:?}", backend);
+                // FIRST: Check if backend is already running
+                // DON'T kill existing backends - just reuse them
+                if is_backend_running() {
+                    log::info!("Backend is already running on port 9876 - reusing existing instance");
+                    // Don't start a new one, just use the existing
+                } else if let Some(backend) = backend_path {
+                    log::info!("No backend running, starting new instance at: {:?}", backend);
                     
-                    // Clean up any zombie processes first
-                    kill_zombie_backends();
-                    
-                    match Command::new(&backend)
-                        .stdout(Stdio::piped())
-                        .stderr(Stdio::piped())
-                        .spawn()
+                    // Start the backend as a detached process (not a child of frontend)
+                    // This prevents the backend from being killed when frontend closes unexpectedly
+                    #[cfg(unix)]
                     {
-                        Ok(child) => {
-                            let pid = child.id();
-                            log::info!("Backend started successfully (PID: {})", pid);
-                            
-                            // Store the PID for cleanup
-                            if let Some(state) = handle.try_state::<BackendState>() {
-                                state.backend_pid.store(pid, Ordering::SeqCst);
+                        // Use setsid on Unix to detach from parent process group
+                        match Command::new("setsid")
+                            .arg(&backend)
+                            .stdout(Stdio::null())
+                            .stderr(Stdio::null())
+                            .spawn()
+                        {
+                            Ok(child) => {
+                                let pid = child.id();
+                                log::info!("Backend started as detached process (PID: {})", pid);
+                                
+                                // Store the PID for cleanup on intentional close
+                                if let Some(state) = handle.try_state::<BackendState>() {
+                                    state.backend_pid.store(pid, Ordering::SeqCst);
+                                }
+                            }
+                            Err(_) => {
+                                // setsid might not be available, try without it
+                                match Command::new(&backend)
+                                    .stdout(Stdio::null())
+                                    .stderr(Stdio::null())
+                                    .spawn()
+                                {
+                                    Ok(child) => {
+                                        let pid = child.id();
+                                        log::info!("Backend started (PID: {})", pid);
+                                        if let Some(state) = handle.try_state::<BackendState>() {
+                                            state.backend_pid.store(pid, Ordering::SeqCst);
+                                        }
+                                    }
+                                    Err(e) => {
+                                        log::error!("Failed to spawn backend: {}", e);
+                                    }
+                                }
                             }
                         }
-                        Err(e) => {
-                            log::error!("Failed to spawn backend: {}", e);
+                    }
+                    
+                    #[cfg(windows)]
+                    {
+                        // Windows: Use CREATE_NEW_PROCESS_GROUP to detach
+                        use std::os::windows::process::CommandExt;
+                        const CREATE_NEW_PROCESS_GROUP: u32 = 0x00000200;
+                        const DETACHED_PROCESS: u32 = 0x00000008;
+                        
+                        match Command::new(&backend)
+                            .creation_flags(CREATE_NEW_PROCESS_GROUP | DETACHED_PROCESS)
+                            .stdout(Stdio::null())
+                            .stderr(Stdio::null())
+                            .spawn()
+                        {
+                            Ok(child) => {
+                                let pid = child.id();
+                                log::info!("Backend started as detached process (PID: {})", pid);
+                                if let Some(state) = handle.try_state::<BackendState>() {
+                                    state.backend_pid.store(pid, Ordering::SeqCst);
+                                }
+                            }
+                            Err(e) => {
+                                log::error!("Failed to spawn backend: {}", e);
+                            }
                         }
                     }
                 } else {
