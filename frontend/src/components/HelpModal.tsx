@@ -6,8 +6,8 @@ interface HelpModalProps {
   onClose: () => void;
 }
 
-const VERSION = '0.9.7';
-const RELEASE_DATE = 'December 16, 2025';
+const VERSION = '0.9.8';
+const RELEASE_DATE = 'December 17, 2025';
 
 const features = [
   {
@@ -61,6 +61,20 @@ const quickStart = [
 ];
 
 const changelog = [
+  {
+    version: '0.9.8',
+    date: 'December 17, 2025',
+    changes: [
+      'Platform-specific fixes for Windows and Linux releases',
+      'Exclude uvloop on Windows (Unix-only library)',
+      'Enhanced zombie process cleanup with fallback commands',
+      'Linux: pgrep → ps+grep, lsof → ss → fuser fallback chain',
+      'Windows: PowerShell cleanup, multiple binary name support',
+      'Comprehensive debug logging for connection troubleshooting',
+      'WebSocket close code meanings for easier debugging',
+      'Fixed WebSocket connection loops (stable refs, no dependency loops)'
+    ]
+  },
   {
     version: '0.9.7',
     date: 'December 16, 2025',

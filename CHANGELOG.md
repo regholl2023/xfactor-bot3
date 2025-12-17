@@ -5,6 +5,40 @@ All notable changes to the XFactor Bot project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.8] - 2025-12-17
+
+### Added
+- **Comprehensive Debug Logging**: System info, port checks, and dependency verification at startup
+  - Platform, architecture, hostname, and IP address logging
+  - Port availability check before binding
+  - Detailed error messages with troubleshooting commands
+- **WebSocket Debug Info**: Close code meanings (1000-1015) in browser console
+  - Debug tips for connection errors (netstat/lsof commands)
+  - Health check result logging for faster troubleshooting
+
+### Changed
+- **Platform-Specific Build**: PyInstaller now handles platform differences
+  - Excludes `uvloop` on Windows (Unix-only library)
+  - Excludes `psycopg2` on Windows (requires PostgreSQL libs)
+  - Excludes GUI packages on Linux (not needed for server)
+
+### Fixed
+- **Linux Zombie Cleanup**: Added fallback command chain
+  - `pgrep` → `ps + grep` fallback for minimal distros
+  - `lsof` → `ss` → `fuser` fallback chain for port cleanup
+- **Windows Zombie Cleanup**: Enhanced process termination
+  - Tries multiple backend binary names
+  - PowerShell fallback for more reliable port cleanup
+  - Handles ESTABLISHED connections in addition to LISTENING
+- **WebSocket Connection Loops**: Fixed React dependency loop
+  - Added `isConnectedRef` and `connectRef` for stable references
+  - Empty deps array on main effect (runs once, uses refs)
+  - Duplicate connection guard to prevent simultaneous connects
+- **Import Errors**: Fixed `get_bot_manager()` import across codebase
+  - `src/api/routes/agentic_tuning.py`
+  - `src/api/main.py`
+  - `desktop/scripts/run_backend.py`
+
 ## [0.9.7] - 2025-12-16
 
 ### Added
