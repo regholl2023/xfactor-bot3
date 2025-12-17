@@ -131,17 +131,28 @@ function App() {
 
   // Check if backend is available via health endpoint
   const checkBackendHealth = useCallback(async (): Promise<boolean> => {
+    const healthUrl = `${getApiBaseUrl()}/health`
     try {
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 3000) // 3s timeout
       
-      const response = await fetch(`${getApiBaseUrl()}/health`, {
+      const response = await fetch(healthUrl, {
         signal: controller.signal,
       })
       clearTimeout(timeoutId)
       
-      return response.ok
-    } catch {
+      if (response.ok) {
+        console.log(`Backend health check passed: ${healthUrl}`)
+        return true
+      } else {
+        console.warn(`Backend health check failed: ${response.status} ${response.statusText}`)
+        return false
+      }
+    } catch (e) {
+      // Only log occasionally to avoid spam
+      if (reconnectAttempts.current <= 3 || reconnectAttempts.current % 10 === 0) {
+        console.warn(`Backend health check error (${healthUrl}):`, e instanceof Error ? e.message : e)
+      }
       return false
     }
   }, [])
@@ -264,7 +275,39 @@ function App() {
           heartbeatInterval.current = null
         }
         
-        console.log(`WebSocket closed: code=${event.code}, reason=${event.reason || 'none'}, clean=${event.wasClean}`)
+        // Log detailed close information
+        const closeCodeMeanings: Record<number, string> = {
+          1000: 'Normal closure',
+          1001: 'Going away (page closing)',
+          1002: 'Protocol error',
+          1003: 'Unsupported data',
+          1005: 'No status received',
+          1006: 'Abnormal closure (connection lost)',
+          1007: 'Invalid payload data',
+          1008: 'Policy violation',
+          1009: 'Message too big',
+          1010: 'Extension required',
+          1011: 'Internal server error',
+          1012: 'Service restart',
+          1013: 'Try again later',
+          1014: 'Bad gateway',
+          1015: 'TLS handshake failure',
+        }
+        
+        const codeMeaning = closeCodeMeanings[event.code] || 'Unknown'
+        console.log(`WebSocket closed: code=${event.code} (${codeMeaning}), reason="${event.reason || 'none'}", clean=${event.wasClean}`)
+        
+        // Provide helpful debug info for connection failures
+        if (event.code === 1006) {
+          console.warn('=== Connection Lost Debug Info ===')
+          console.warn('Code 1006 usually means:')
+          console.warn('  1. Backend server crashed or stopped')
+          console.warn('  2. Network connection dropped')
+          console.warn('  3. Firewall blocked the connection')
+          console.warn('  4. Backend took too long to respond')
+          console.warn('Checking backend health...')
+        }
+        
         isConnectedRef.current = false
         setConnected(false)
         setWsState('disconnected')
@@ -290,7 +333,15 @@ function App() {
       }
       
       ws.onerror = (error) => {
-        console.error('WebSocket error:', error)
+        console.error('=== WebSocket Connection Error ===')
+        console.error('Error details:', error)
+        console.error('Attempted URL:', wsUrl)
+        console.error('Troubleshooting tips:')
+        console.error('  1. Check if backend is running (port 9876)')
+        console.error('  2. On Windows: Run "netstat -ano | findstr :9876"')
+        console.error('  3. On Linux: Run "lsof -i :9876" or "ss -tulpn | grep 9876"')
+        console.error('  4. Check firewall settings')
+        console.error('  5. Try opening http://127.0.0.1:9876/health in browser')
         // onclose will be called after onerror, so reconnect logic is there
       }
       
