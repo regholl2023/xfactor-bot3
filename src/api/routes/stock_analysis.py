@@ -14,6 +14,21 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
+
+def to_python_type(val):
+    """Convert numpy types to Python native types for JSON serialization."""
+    if val is None:
+        return None
+    if isinstance(val, (np.integer, np.int64, np.int32)):
+        return int(val)
+    if isinstance(val, (np.floating, np.float64, np.float32)):
+        return float(val)
+    if isinstance(val, (np.bool_, np.bool)):
+        return bool(val)
+    if isinstance(val, np.ndarray):
+        return val.tolist()
+    return val
+
 router = APIRouter(prefix="/stock-analysis", tags=["stock-analysis"])
 
 
@@ -308,10 +323,10 @@ def analyze_target_meeting(
     
     # Price target analysis
     target_analysis = {
-        "current_price": current_price,
+        "current_price": float(current_price),
         "trend": trend,
         "momentum": momentum,
-        "twenty_day_change_pct": price_change_20d,
+        "twenty_day_change_pct": float(price_change_20d),
     }
     
     if price_targets:
@@ -319,16 +334,16 @@ def analyze_target_meeting(
         high_target = price_targets.get("high", current_price)
         low_target = price_targets.get("low", current_price)
         
-        target_analysis["mean_target"] = mean_target
-        target_analysis["upside_to_mean_pct"] = ((mean_target - current_price) / current_price) * 100
-        target_analysis["upside_to_high_pct"] = ((high_target - current_price) / current_price) * 100
-        target_analysis["downside_to_low_pct"] = ((low_target - current_price) / current_price) * 100
+        target_analysis["mean_target"] = float(mean_target)
+        target_analysis["upside_to_mean_pct"] = float(((mean_target - current_price) / current_price) * 100) if current_price else 0.0
+        target_analysis["upside_to_high_pct"] = float(((high_target - current_price) / current_price) * 100) if current_price else 0.0
+        target_analysis["downside_to_low_pct"] = float(((low_target - current_price) / current_price) * 100) if current_price else 0.0
         
         # Will meet target analysis
         if price_change_20d > 0:
             days_to_mean = abs(target_analysis["upside_to_mean_pct"]) / (price_change_20d / 20) if price_change_20d > 0 else None
             target_analysis["estimated_days_to_mean_target"] = int(days_to_mean) if days_to_mean else None
-            target_analysis["likely_to_meet_target"] = price_change_20d > 0 and target_analysis["upside_to_mean_pct"] > 0
+            target_analysis["likely_to_meet_target"] = bool(price_change_20d > 0 and target_analysis["upside_to_mean_pct"] > 0)
         else:
             target_analysis["estimated_days_to_mean_target"] = None
             target_analysis["likely_to_meet_target"] = False
@@ -492,10 +507,10 @@ async def analyze_stock(
         price_targets = {}
         try:
             price_targets = {
-                "low": info.get("targetLowPrice", 0),
-                "mean": info.get("targetMeanPrice", 0),
-                "high": info.get("targetHighPrice", 0),
-                "current": info.get("currentPrice", closes[-1] if closes else 0),
+                "low": float(info.get("targetLowPrice") or 0),
+                "mean": float(info.get("targetMeanPrice") or 0),
+                "high": float(info.get("targetHighPrice") or 0),
+                "current": float(info.get("currentPrice") or (closes[-1] if closes else 0)),
             }
         except Exception as e:
             logger.debug(f"Could not fetch price targets: {e}")
