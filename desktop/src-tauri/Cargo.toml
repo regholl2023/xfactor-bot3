@@ -1,6 +1,6 @@
 [package]
 name = "xfactor-bot"
-version = "1.0.3"
+version = "1.0.7"
 description = "XFactor Bot - AI-Powered Automated Trading System"
 authors = ["XFactor Trading"]
 license = "MIT"
