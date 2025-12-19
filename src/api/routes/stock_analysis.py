@@ -131,6 +131,7 @@ class StockAnalysisResponse(BaseModel):
     eps_history: List[FundamentalDataPoint]
     market_cap_history: List[FundamentalDataPoint]
     revenue_history: List[FundamentalDataPoint]
+    profit_margin_history: List[FundamentalDataPoint]
     employee_count_history: List[FundamentalDataPoint]
     
     # Technical indicators
@@ -562,50 +563,118 @@ async def analyze_stock(
             employees=info.get("fullTimeEmployees"),
         )
         
-        # Calculate P/E ratio history (approximation using EPS)
-        pe_ratio_history = []
-        eps_history = []
-        market_cap_history = []
+        # Get shares outstanding for market cap calculation
+        shares_outstanding = info.get("sharesOutstanding", 0)
         
-        # For now, we use quarterly data where available
+        # Calculate Market Cap history (Price × Shares Outstanding)
+        market_cap_history = []
+        if shares_outstanding and shares_outstanding > 0:
+            for i, (date_str, close_price) in enumerate(zip(dates, closes)):
+                market_cap = float(close_price) * shares_outstanding / 1e9  # In billions
+                market_cap_history.append(FundamentalDataPoint(
+                    date=date_str,
+                    value=round(market_cap, 2)
+                ))
+        
+        # Get quarterly earnings for EPS and P/E calculation
+        eps_history = []
+        quarterly_eps_map = {}  # date -> TTM EPS
         try:
-            quarterly_financials = ticker.quarterly_financials
             quarterly_earnings = ticker.quarterly_earnings
-            
             if quarterly_earnings is not None and not quarterly_earnings.empty:
+                # Build list of quarterly EPS sorted by date
+                quarterly_eps_list = []
                 for date, row in quarterly_earnings.iterrows():
                     date_str = date.strftime('%Y-%m-%d') if hasattr(date, 'strftime') else str(date)
                     eps = row.get('Earnings', 0)
-                    if eps:
+                    if eps and not np.isnan(eps):
+                        quarterly_eps_list.append((date_str, float(eps)))
                         eps_history.append(FundamentalDataPoint(
                             date=date_str,
                             value=round(float(eps), 2)
                         ))
+                
+                # Calculate TTM (Trailing Twelve Month) EPS for each quarter
+                quarterly_eps_list.sort(key=lambda x: x[0])
+                for i in range(3, len(quarterly_eps_list)):
+                    # Sum of last 4 quarters
+                    ttm_eps = sum([quarterly_eps_list[j][1] for j in range(i-3, i+1)])
+                    quarterly_eps_map[quarterly_eps_list[i][0]] = ttm_eps
         except Exception as e:
-            logger.debug(f"Could not fetch quarterly data: {e}")
+            logger.debug(f"Could not fetch quarterly earnings: {e}")
         
-        # Employee count history (limited data available)
-        employee_count_history = []
-        if company.employees:
-            # yfinance only provides current count, add as single point
-            employee_count_history.append(FundamentalDataPoint(
-                date=dates[-1] if dates else datetime.now().strftime('%Y-%m-%d'),
-                value=company.employees
-            ))
+        # Calculate P/E ratio history
+        pe_ratio_history = []
+        current_pe = info.get("trailingPE")
+        if current_pe and not np.isnan(current_pe):
+            # We have current P/E, try to calculate historical P/E
+            # Use TTM EPS from quarterly data
+            if quarterly_eps_map:
+                # For each price point, find the most recent TTM EPS
+                sorted_eps_dates = sorted(quarterly_eps_map.keys())
+                for date_str, close_price in zip(dates, closes):
+                    # Find most recent TTM EPS before this date
+                    ttm_eps = None
+                    for eps_date in sorted_eps_dates:
+                        if eps_date <= date_str:
+                            ttm_eps = quarterly_eps_map[eps_date]
+                        else:
+                            break
+                    
+                    if ttm_eps and ttm_eps > 0:
+                        pe = float(close_price) / ttm_eps
+                        if 0 < pe < 500:  # Reasonable P/E range
+                            pe_ratio_history.append(FundamentalDataPoint(
+                                date=date_str,
+                                value=round(pe, 2)
+                            ))
         
         # Revenue history
         revenue_history = []
         try:
-            quarterly_revenue = ticker.quarterly_revenue
-            if quarterly_revenue is not None and not quarterly_revenue.empty:
-                for date, value in quarterly_revenue.items():
-                    date_str = date.strftime('%Y-%m-%d') if hasattr(date, 'strftime') else str(date)
-                    revenue_history.append(FundamentalDataPoint(
-                        date=date_str,
-                        value=round(float(value) / 1e9, 2)  # In billions
-                    ))
+            # Try quarterly income statement for revenue
+            quarterly_income = ticker.quarterly_income_stmt
+            if quarterly_income is not None and not quarterly_income.empty:
+                if 'Total Revenue' in quarterly_income.index:
+                    revenue_row = quarterly_income.loc['Total Revenue']
+                    for date, value in revenue_row.items():
+                        if value and not np.isnan(value):
+                            date_str = date.strftime('%Y-%m-%d') if hasattr(date, 'strftime') else str(date)
+                            revenue_history.append(FundamentalDataPoint(
+                                date=date_str,
+                                value=round(float(value) / 1e9, 2)  # In billions
+                            ))
         except Exception as e:
             logger.debug(f"Could not fetch revenue history: {e}")
+        
+        # Profit Margin history (Net Income / Revenue)
+        profit_margin_history = []
+        try:
+            quarterly_income = ticker.quarterly_income_stmt
+            if quarterly_income is not None and not quarterly_income.empty:
+                if 'Total Revenue' in quarterly_income.index and 'Net Income' in quarterly_income.index:
+                    revenue_row = quarterly_income.loc['Total Revenue']
+                    net_income_row = quarterly_income.loc['Net Income']
+                    for date in revenue_row.index:
+                        revenue = revenue_row[date]
+                        net_income = net_income_row.get(date)
+                        if revenue and net_income and not np.isnan(revenue) and not np.isnan(net_income) and revenue > 0:
+                            margin = (float(net_income) / float(revenue)) * 100
+                            date_str = date.strftime('%Y-%m-%d') if hasattr(date, 'strftime') else str(date)
+                            profit_margin_history.append(FundamentalDataPoint(
+                                date=date_str,
+                                value=round(margin, 2)
+                            ))
+        except Exception as e:
+            logger.debug(f"Could not fetch profit margin history: {e}")
+        
+        # Employee count history (limited - yfinance only provides current)
+        employee_count_history = []
+        if company.employees:
+            employee_count_history.append(FundamentalDataPoint(
+                date=dates[-1] if dates else datetime.now().strftime('%Y-%m-%d'),
+                value=company.employees
+            ))
         
         return StockAnalysisResponse(
             symbol=symbol.upper(),
@@ -615,6 +684,7 @@ async def analyze_stock(
             eps_history=sorted(eps_history, key=lambda x: x.date),
             market_cap_history=market_cap_history,
             revenue_history=sorted(revenue_history, key=lambda x: x.date),
+            profit_margin_history=sorted(profit_margin_history, key=lambda x: x.date),
             employee_count_history=employee_count_history,
             sma_20=to_data_points(dates, sma_20_values),
             sma_50=to_data_points(dates, sma_50_values),

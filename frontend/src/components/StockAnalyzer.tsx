@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { createChart, ColorType, IChartApi, ISeriesApi, LineData, Time, CandlestickData, SeriesMarker } from 'lightweight-charts';
 import { apiUrl } from '../config/api';
-import { Search, TrendingUp, TrendingDown, Target, AlertTriangle, ChevronDown, ChevronUp, Layers, Activity, Users, DollarSign, BarChart3, Crosshair } from 'lucide-react';
+import { Search, TrendingUp, TrendingDown, Target, AlertTriangle, ChevronDown, ChevronUp, Layers, Activity, Users, DollarSign, BarChart3, Crosshair, PieChart, TrendingUp as TrendUp, Building2, Percent } from 'lucide-react';
 
 // Types
 interface PricePoint {
@@ -71,6 +71,7 @@ interface StockAnalysisData {
   eps_history: FundamentalDataPoint[];
   market_cap_history: FundamentalDataPoint[];
   revenue_history: FundamentalDataPoint[];
+  profit_margin_history: FundamentalDataPoint[];
   employee_count_history: FundamentalDataPoint[];
   sma_20: FundamentalDataPoint[];
   sma_50: FundamentalDataPoint[];
@@ -128,13 +129,21 @@ const StockAnalyzer: React.FC = () => {
 
   // Overlay states
   const [overlays, setOverlays] = useState<OverlayConfig[]>([
+    // Technical overlays (same price scale)
     { id: 'sma_20', label: 'SMA 20', color: '#3b82f6', enabled: true, category: 'technical', icon: <Activity className="w-3 h-3" /> },
     { id: 'sma_50', label: 'SMA 50', color: '#8b5cf6', enabled: true, category: 'technical', icon: <Activity className="w-3 h-3" /> },
     { id: 'sma_200', label: 'SMA 200', color: '#f59e0b', enabled: false, category: 'technical', icon: <Activity className="w-3 h-3" /> },
     { id: 'ema_12', label: 'EMA 12', color: '#10b981', enabled: false, category: 'technical', icon: <Activity className="w-3 h-3" /> },
     { id: 'ema_26', label: 'EMA 26', color: '#ef4444', enabled: false, category: 'technical', icon: <Activity className="w-3 h-3" /> },
+    // Volume overlays
     { id: 'volume', label: 'Volume', color: '#64748b', enabled: true, category: 'volume', icon: <BarChart3 className="w-3 h-3" /> },
     { id: 'volume_sma', label: 'Vol SMA 20', color: '#94a3b8', enabled: false, category: 'volume', icon: <BarChart3 className="w-3 h-3" /> },
+    // Fundamental overlays (secondary axis)
+    { id: 'market_cap', label: 'Mkt Cap ($B)', color: '#06b6d4', enabled: false, category: 'fundamental', icon: <Building2 className="w-3 h-3" /> },
+    { id: 'pe_ratio', label: 'P/E Ratio', color: '#f97316', enabled: false, category: 'fundamental', icon: <PieChart className="w-3 h-3" /> },
+    { id: 'profit_margin', label: 'Profit Margin %', color: '#84cc16', enabled: false, category: 'fundamental', icon: <Percent className="w-3 h-3" /> },
+    { id: 'revenue', label: 'Revenue ($B)', color: '#a855f7', enabled: false, category: 'fundamental', icon: <DollarSign className="w-3 h-3" /> },
+    { id: 'eps', label: 'EPS', color: '#ec4899', enabled: false, category: 'fundamental', icon: <TrendUp className="w-3 h-3" /> },
   ]);
 
   // Chart refs
@@ -317,6 +326,44 @@ const StockAnalyzer: React.FC = () => {
           lastValueVisible: false,
           crosshairMarkerVisible: false,
         });
+        lineSeries.setData(
+          data.map(d => ({ time: d.date as Time, value: d.value }))
+        );
+        overlaySeriesRef.current.set(overlay.id, lineSeries);
+      }
+    });
+
+    // Add fundamental overlays on secondary axis (left side)
+    const fundamentalDataMap: Record<string, FundamentalDataPoint[]> = {
+      market_cap: analysisData.market_cap_history || [],
+      pe_ratio: analysisData.pe_ratio_history || [],
+      profit_margin: analysisData.profit_margin_history || [],
+      revenue: analysisData.revenue_history || [],
+      eps: analysisData.eps_history || [],
+    };
+
+    overlays.filter(o => o.enabled && o.category === 'fundamental').forEach(overlay => {
+      const data = fundamentalDataMap[overlay.id];
+      if (data && data.length > 0) {
+        // Create a separate price scale for each fundamental
+        const scaleId = `fundamental_${overlay.id}`;
+        const lineSeries = chart.addLineSeries({
+          color: overlay.color,
+          lineWidth: 2,
+          priceLineVisible: false,
+          lastValueVisible: true,
+          crosshairMarkerVisible: true,
+          priceScaleId: scaleId,
+          lineStyle: 0, // Solid
+        });
+        
+        // Configure the secondary price scale (will appear on left)
+        chart.priceScale(scaleId).applyOptions({
+          scaleMargins: { top: 0.1, bottom: 0.3 },
+          borderColor: overlay.color,
+          visible: true,
+        });
+        
         lineSeries.setData(
           data.map(d => ({ time: d.date as Time, value: d.value }))
         );
