@@ -1,12 +1,29 @@
 import { useEffect, useRef, useState, useMemo } from 'react'
 import { createChart, ColorType, IChartApi, ISeriesApi, LineData, Time } from 'lightweight-charts'
-import { LineChart } from 'lucide-react'
+import { LineChart, TrendingUp, TrendingDown, Target, Eye, EyeOff } from 'lucide-react'
 
 interface EquityChartProps {
   height?: number
 }
 
 type TimeRange = '1D' | '1W' | '1M' | '3M' | 'YTD' | 'ALL'
+type ProjectionHorizon = '1m' | '3m' | '6m' | '1y'
+
+interface ProjectionPoint {
+  date: string
+  value: number
+  low: number
+  high: number
+}
+
+interface ProjectionData {
+  horizon: ProjectionHorizon
+  points: ProjectionPoint[]
+  target: { low: number; mid: number; high: number }
+  dailyReturn: number
+  volatility: number
+  trend: 'bullish' | 'bearish' | 'neutral'
+}
 
 function filterDataByRange(data: LineData[], range: TimeRange): LineData[] {
   if (data.length === 0) return data
@@ -43,18 +60,106 @@ function filterDataByRange(data: LineData[], range: TimeRange): LineData[] {
   return data.filter(d => (d.time as string) >= cutoffStr)
 }
 
+// Calculate linear regression and projections
+function calculateProjections(data: LineData[], horizon: ProjectionHorizon): ProjectionData | null {
+  if (data.length < 10) return null
+  
+  const values = data.map(d => d.value)
+  const n = values.length
+  
+  // Calculate daily returns
+  const returns: number[] = []
+  for (let i = 1; i < values.length; i++) {
+    if (values[i - 1] > 0) {
+      returns.push((values[i] - values[i - 1]) / values[i - 1])
+    }
+  }
+  
+  if (returns.length < 5) return null
+  
+  // Calculate average daily return and volatility
+  const avgReturn = returns.reduce((a, b) => a + b, 0) / returns.length
+  const variance = returns.reduce((sum, r) => sum + Math.pow(r - avgReturn, 2), 0) / returns.length
+  const volatility = Math.sqrt(variance)
+  
+  // Determine trend
+  let trend: 'bullish' | 'bearish' | 'neutral' = 'neutral'
+  if (avgReturn > 0.001) trend = 'bullish'
+  else if (avgReturn < -0.001) trend = 'bearish'
+  
+  // Project forward
+  const daysMap: Record<ProjectionHorizon, number> = {
+    '1m': 22,
+    '3m': 66,
+    '6m': 126,
+    '1y': 252,
+  }
+  
+  const projectionDays = daysMap[horizon]
+  const lastValue = values[values.length - 1]
+  const lastDate = new Date(data[data.length - 1].time as string)
+  
+  const points: ProjectionPoint[] = []
+  
+  for (let i = 1; i <= projectionDays; i++) {
+    const futureDate = new Date(lastDate)
+    futureDate.setDate(futureDate.getDate() + i)
+    
+    // Skip weekends
+    if (futureDate.getDay() === 0 || futureDate.getDay() === 6) continue
+    
+    // Compound growth
+    const projectedValue = lastValue * Math.pow(1 + avgReturn, i)
+    
+    // Confidence bands (widen with time)
+    const stdDev = volatility * Math.sqrt(i) * lastValue
+    
+    points.push({
+      date: futureDate.toISOString().split('T')[0],
+      value: Math.max(0, projectedValue),
+      low: Math.max(0, projectedValue - 2 * stdDev),
+      high: projectedValue + 2 * stdDev,
+    })
+  }
+  
+  // Calculate target values
+  const lastProjection = points[points.length - 1]
+  
+  return {
+    horizon,
+    points,
+    target: {
+      low: lastProjection?.low || lastValue,
+      mid: lastProjection?.value || lastValue,
+      high: lastProjection?.high || lastValue,
+    },
+    dailyReturn: avgReturn * 100,
+    volatility: volatility * 100 * Math.sqrt(252), // Annualized
+    trend,
+  }
+}
+
 export function EquityChart({ height = 280 }: EquityChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
   const seriesRef = useRef<ISeriesApi<'Area'> | null>(null)
+  const projectionSeriesRef = useRef<Map<string, ISeriesApi<'Line'>>>(new Map())
+  
   const [fullData, setFullData] = useState<LineData[]>([])
   const [selectedRange, setSelectedRange] = useState<TimeRange>('3M')
   const [loading, setLoading] = useState(true)
+  const [showProjections, setShowProjections] = useState(true)
+  const [projectionHorizon, setProjectionHorizon] = useState<ProjectionHorizon>('3m')
   
   // Filter data based on selected range
   const filteredData = useMemo(() => {
     return filterDataByRange(fullData, selectedRange)
   }, [fullData, selectedRange])
+  
+  // Calculate projections
+  const projectionData = useMemo(() => {
+    return calculateProjections(filteredData, projectionHorizon)
+  }, [filteredData, projectionHorizon])
   
   // Calculate stats for filtered data
   const currentValue = filteredData[filteredData.length - 1]?.value || 0
@@ -104,6 +209,7 @@ export function EquityChart({ height = 280 }: EquityChartProps) {
       }
       chartRef.current = null
       seriesRef.current = null
+      projectionSeriesRef.current.clear()
     }
 
     // Create chart
@@ -162,6 +268,65 @@ export function EquityChart({ height = 280 }: EquityChartProps) {
     seriesRef.current = areaSeries
     areaSeries.setData(filteredData)
 
+    // Add projection lines if enabled
+    if (showProjections && projectionData && projectionData.points.length > 0) {
+      const lastHistorical = filteredData[filteredData.length - 1]
+      
+      // Main projection line (dashed)
+      const projectionSeries = chart.addLineSeries({
+        color: '#8b5cf6',
+        lineWidth: 2,
+        lineStyle: 2, // Dashed
+        lastValueVisible: true,
+        priceLineVisible: false,
+      })
+      
+      projectionSeries.setData([
+        { time: lastHistorical.time, value: lastHistorical.value },
+        ...projectionData.points.map(p => ({
+          time: p.date as Time,
+          value: p.value,
+        }))
+      ])
+      projectionSeriesRef.current.set('main', projectionSeries)
+      
+      // Upper confidence band
+      const upperBandSeries = chart.addLineSeries({
+        color: 'rgba(34, 197, 94, 0.3)',
+        lineWidth: 1,
+        lineStyle: 3, // Dotted
+        priceLineVisible: false,
+        lastValueVisible: false,
+      })
+      
+      upperBandSeries.setData([
+        { time: lastHistorical.time, value: lastHistorical.value },
+        ...projectionData.points.map(p => ({
+          time: p.date as Time,
+          value: p.high,
+        }))
+      ])
+      projectionSeriesRef.current.set('upper', upperBandSeries)
+      
+      // Lower confidence band
+      const lowerBandSeries = chart.addLineSeries({
+        color: 'rgba(239, 68, 68, 0.3)',
+        lineWidth: 1,
+        lineStyle: 3,
+        priceLineVisible: false,
+        lastValueVisible: false,
+      })
+      
+      lowerBandSeries.setData([
+        { time: lastHistorical.time, value: lastHistorical.value },
+        ...projectionData.points.map(p => ({
+          time: p.date as Time,
+          value: p.low,
+        }))
+      ])
+      projectionSeriesRef.current.set('lower', lowerBandSeries)
+    }
+
     // Fit content
     chart.timeScale().fitContent()
 
@@ -188,9 +353,10 @@ export function EquityChart({ height = 280 }: EquityChartProps) {
         }
         chartRef.current = null
         seriesRef.current = null
+        projectionSeriesRef.current.clear()
       }
     }
-  }, [filteredData, height, isPositive, showEmptyState])
+  }, [filteredData, height, isPositive, showEmptyState, showProjections, projectionData])
 
   const handleRangeChange = (range: TimeRange) => {
     setSelectedRange(range)
@@ -245,8 +411,117 @@ export function EquityChart({ height = 280 }: EquityChartProps) {
         </div>
       </div>
       
+      {/* Projection Controls */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowProjections(!showProjections)}
+            className={`px-3 py-1.5 text-xs rounded-md flex items-center gap-1.5 transition-colors ${
+              showProjections
+                ? 'bg-violet-500/20 text-violet-400 border border-violet-500/30'
+                : 'bg-secondary/50 text-muted-foreground hover:bg-secondary'
+            }`}
+          >
+            {showProjections ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+            Projections
+          </button>
+          
+          {showProjections && (
+            <div className="flex items-center gap-1 bg-secondary/30 rounded-md p-0.5">
+              {(['1m', '3m', '6m', '1y'] as ProjectionHorizon[]).map(h => (
+                <button
+                  key={h}
+                  onClick={() => setProjectionHorizon(h)}
+                  className={`px-2 py-1 text-xs rounded transition-colors ${
+                    projectionHorizon === h
+                      ? 'bg-violet-600 text-white'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {h.toUpperCase()}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        
+        {/* Trend indicator */}
+        {projectionData && showProjections && (
+          <div className={`flex items-center gap-1 text-xs px-2 py-1 rounded ${
+            projectionData.trend === 'bullish' 
+              ? 'bg-green-500/20 text-green-400'
+              : projectionData.trend === 'bearish'
+              ? 'bg-red-500/20 text-red-400'
+              : 'bg-slate-500/20 text-slate-400'
+          }`}>
+            {projectionData.trend === 'bullish' ? <TrendingUp className="w-3 h-3" /> : 
+             projectionData.trend === 'bearish' ? <TrendingDown className="w-3 h-3" /> : null}
+            {projectionData.trend.toUpperCase()}
+            <span className="text-muted-foreground ml-1">
+              ({projectionData.dailyReturn > 0 ? '+' : ''}{projectionData.dailyReturn.toFixed(3)}%/day)
+            </span>
+          </div>
+        )}
+      </div>
+      
       {/* Chart */}
       <div ref={chartContainerRef} className="rounded-lg overflow-hidden" />
+      
+      {/* Projection Targets */}
+      {showProjections && projectionData && (
+        <div className="grid grid-cols-3 gap-3">
+          <div className="p-3 bg-secondary/30 rounded-lg text-center border border-red-500/20">
+            <div className="text-xs text-muted-foreground mb-1">Bear Case ({projectionHorizon.toUpperCase()})</div>
+            <div className="text-lg font-bold text-red-400">
+              ${projectionData.target.low.toLocaleString(undefined, { minimumFractionDigits: 0 })}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {(((projectionData.target.low - currentValue) / currentValue) * 100).toFixed(1)}%
+            </div>
+          </div>
+          <div className="p-3 bg-secondary/30 rounded-lg text-center border border-violet-500/20">
+            <div className="text-xs text-muted-foreground mb-1">Base Case ({projectionHorizon.toUpperCase()})</div>
+            <div className="text-xl font-bold text-violet-400">
+              ${projectionData.target.mid.toLocaleString(undefined, { minimumFractionDigits: 0 })}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {(((projectionData.target.mid - currentValue) / currentValue) * 100) > 0 ? '+' : ''}
+              {(((projectionData.target.mid - currentValue) / currentValue) * 100).toFixed(1)}%
+            </div>
+          </div>
+          <div className="p-3 bg-secondary/30 rounded-lg text-center border border-green-500/20">
+            <div className="text-xs text-muted-foreground mb-1">Bull Case ({projectionHorizon.toUpperCase()})</div>
+            <div className="text-lg font-bold text-green-400">
+              ${projectionData.target.high.toLocaleString(undefined, { minimumFractionDigits: 0 })}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              +{(((projectionData.target.high - currentValue) / currentValue) * 100).toFixed(1)}%
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Legend */}
+      {showProjections && projectionData && (
+        <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+          <div className="flex items-center gap-1.5">
+            <div className="w-4 h-0.5 bg-violet-500"></div>
+            <span>Projected</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-4 h-0.5 bg-green-500/30"></div>
+            <span>Upper Band (95%)</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-4 h-0.5 bg-red-500/30"></div>
+            <span>Lower Band (95%)</span>
+          </div>
+          <div className="flex items-center gap-1.5 ml-auto">
+            <Target className="w-3 h-3" />
+            <span>Volatility: {projectionData.volatility.toFixed(1)}% annualized</span>
+          </div>
+        </div>
+      )}
       
       {/* Time range buttons */}
       <div className="flex items-center gap-2">
