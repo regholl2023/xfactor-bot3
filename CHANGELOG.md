@@ -5,6 +5,67 @@ All notable changes to the XFactor Bot project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.4] - 2025-12-18
+
+### 📊 Stock Analyzer - Comprehensive Time Series Analysis
+
+#### Stock Search & Analysis
+- **Global Symbol Search**: Search any stock by ticker or company name across all major exchanges
+- **Comprehensive Historical Data**: 1mo, 3mo, 6mo, 1y, 2y, 5y historical price data
+- **Interactive Candlestick Chart**: Full OHLCV candlestick charting with lightweight-charts
+- **Real-time Metrics**: Current price, market cap, P/E, PEG, profit margin, beta, dividend yield
+
+#### Overlay System - Multiple Data Series
+- **Technical Indicators**:
+  - SMA 20, 50, 200 (Simple Moving Averages)
+  - EMA 12, 26 (Exponential Moving Averages)
+  - RSI 14 (Relative Strength Index)
+- **Volume Analysis**: Volume bars with 20-day SMA overlay
+- **Toggle Controls**: Enable/disable any overlay independently
+- **Color-coded Series**: Each overlay has distinct color for clarity
+
+#### Inflection Point Detection
+- **Peak Detection**: Identifies local price peaks with magnitude calculation
+- **Trough Detection**: Identifies local price troughs with magnitude calculation
+- **Golden Cross**: 20-day SMA crossing above 50-day SMA (bullish signal)
+- **Death Cross**: 20-day SMA crossing below 50-day SMA (bearish signal)
+- **Visual Markers**: Arrow markers on chart at each inflection point
+- **Inflection List**: Expandable list with details for each detected point
+
+#### Future Projections & Target Meeting Analysis
+- **Analyst Price Targets**: Low, mean, and high price targets displayed
+- **Target Lines**: Dashed lines on chart showing analyst targets projected forward
+- **Trend Analysis**: Current bullish/bearish trend based on SMA relationship
+- **Momentum Assessment**: Accelerating/stable momentum calculation
+- **Target Probability**: Confidence level (high/medium/low) for meeting targets
+- **Days to Target**: Estimated trading days to reach mean target at current momentum
+- **Assessment Text**: Human-readable analysis of target meeting likelihood
+
+#### Fundamental Data Time Series
+- **EPS History**: Quarterly earnings per share over time
+- **Revenue History**: Quarterly revenue in billions
+- **P/E Ratio Tracking**: Price-to-earnings evolution
+- **Market Cap History**: Market capitalization changes
+- **Employee Count**: Workforce size data
+
+#### Earnings & Dividends
+- **Earnings History**: Past 20 quarters with reported vs estimated EPS
+- **Surprise Tracking**: Earnings surprise percentage
+- **Dividend History**: Up to 40 dividend payments
+- **Future Estimates**: Next 4+ quarters of analyst EPS estimates
+
+#### New API Endpoints
+- `GET /api/stock-analysis/analyze/{symbol}` - Complete stock analysis
+- `GET /api/stock-analysis/inflection-points/{symbol}` - Inflection points only
+- `GET /api/stock-analysis/projections/{symbol}` - Analyst projections
+- `GET /api/stock-analysis/compare` - Compare multiple stocks
+
+#### New Files
+- `src/api/routes/stock_analysis.py` - Stock analysis API endpoints
+- `frontend/src/components/StockAnalyzer.tsx` - Stock analyzer UI component
+
+---
+
 ## [1.0.3] - 2025-12-17
 
 ### 🔮 AI-Powered Market Forecasting & Speculation Engine

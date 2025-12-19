@@ -16,7 +16,8 @@ import {
   Sparkles,
   Video,
   AlertTriangle,
-  CandlestickChart
+  CandlestickChart,
+  Crosshair
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { PortfolioCard } from './PortfolioCard'
@@ -37,6 +38,7 @@ import ForecastingPanel from './ForecastingPanel'
 import VideoPlatformsPanel from './VideoPlatformsPanel'
 import BotRiskPanel from './BotRiskPanel'
 import ForexPanel from './ForexPanel'
+import StockAnalyzer from './StockAnalyzer'
 
 export function Dashboard() {
   // Portfolio data - will be populated when broker is connected
@@ -97,12 +99,22 @@ export function Dashboard() {
         />
       </div>
 
+      {/* Stock Analyzer - Deep Analysis with Overlays */}
+      <CollapsiblePanel 
+        title="📊 Stock Analyzer" 
+        icon={<Crosshair className="h-5 w-5" />}
+        badge="NEW"
+        defaultExpanded={true}
+      >
+        <StockAnalyzer />
+      </CollapsiblePanel>
+
       {/* AI Market Forecasting - NEW v1.0.3 */}
       <CollapsiblePanel 
         title="🔮 AI Market Forecasting" 
         icon={<Sparkles className="h-5 w-5" />}
         badge="NEW"
-        defaultExpanded={true}
+        defaultExpanded={false}
       >
         <ForecastingPanel />
       </CollapsiblePanel>
