@@ -526,3 +526,272 @@ async def get_forecasting_dashboard():
         "updated_at": datetime.now(timezone.utc).isoformat(),
     }
 
+
+# =============================================================================
+# Price Projections / Extrapolation Forecasting
+# =============================================================================
+
+class ProjectionPoint(BaseModel):
+    """A single point in the projection."""
+    date: str
+    value: float
+    is_projection: bool = False
+
+
+class PriceProjectionResponse(BaseModel):
+    """Price projection response with historical and forecasted data."""
+    symbol: str
+    current_price: float
+    projection_method: str
+    confidence: str
+    
+    # Historical data
+    historical: List[Dict[str, Any]]
+    
+    # Projections for different horizons
+    projection_1m: List[Dict[str, Any]]
+    projection_3m: List[Dict[str, Any]]
+    projection_6m: List[Dict[str, Any]]
+    projection_1y: List[Dict[str, Any]]
+    
+    # Price targets
+    target_1m: Dict[str, float]
+    target_3m: Dict[str, float]
+    target_6m: Dict[str, float]
+    target_1y: Dict[str, float]
+    
+    # Analyst targets if available
+    analyst_targets: Dict[str, Any]
+    
+    # Trend analysis
+    trend_direction: str
+    trend_strength: float
+    volatility: float
+    
+    updated_at: str
+
+
+def calculate_linear_regression(prices: List[float]) -> tuple:
+    """Calculate linear regression slope and intercept."""
+    import numpy as np
+    n = len(prices)
+    if n < 2:
+        return 0, prices[-1] if prices else 0
+    
+    x = np.arange(n)
+    y = np.array(prices)
+    
+    # Calculate slope and intercept
+    x_mean = np.mean(x)
+    y_mean = np.mean(y)
+    
+    numerator = np.sum((x - x_mean) * (y - y_mean))
+    denominator = np.sum((x - x_mean) ** 2)
+    
+    if denominator == 0:
+        return 0, y_mean
+    
+    slope = numerator / denominator
+    intercept = y_mean - slope * x_mean
+    
+    return float(slope), float(intercept)
+
+
+def calculate_volatility(prices: List[float]) -> float:
+    """Calculate annualized volatility."""
+    import numpy as np
+    if len(prices) < 2:
+        return 0
+    
+    returns = np.diff(prices) / prices[:-1]
+    daily_vol = np.std(returns)
+    annualized_vol = daily_vol * np.sqrt(252)
+    
+    return float(annualized_vol)
+
+
+def generate_projections(
+    prices: List[float],
+    dates: List[str],
+    days_ahead: int,
+    volatility: float,
+    slope: float,
+    intercept: float
+) -> List[Dict[str, Any]]:
+    """Generate price projections with confidence bands."""
+    from datetime import datetime, timedelta
+    import numpy as np
+    
+    projections = []
+    last_date = datetime.strptime(dates[-1], '%Y-%m-%d')
+    n = len(prices)
+    last_price = prices[-1]
+    
+    for i in range(1, days_ahead + 1):
+        future_date = last_date + timedelta(days=i)
+        
+        # Skip weekends
+        if future_date.weekday() >= 5:
+            continue
+        
+        # Linear projection
+        projected_idx = n + i
+        linear_price = slope * projected_idx + intercept
+        
+        # Add some mean reversion towards linear trend
+        weight = min(i / 30, 1.0)  # Gradually shift to linear
+        projected_price = last_price * (1 - weight) + linear_price * weight
+        
+        # Daily growth rate from slope
+        daily_return = slope / last_price if last_price > 0 else 0
+        projected_price = last_price * (1 + daily_return) ** i
+        
+        # Ensure positive
+        projected_price = max(projected_price, last_price * 0.5)
+        
+        # Calculate confidence bands based on volatility and time
+        std_dev = volatility * np.sqrt(i / 252) * last_price
+        
+        projections.append({
+            "date": future_date.strftime('%Y-%m-%d'),
+            "value": round(float(projected_price), 2),
+            "low": round(float(projected_price - 2 * std_dev), 2),
+            "high": round(float(projected_price + 2 * std_dev), 2),
+            "is_projection": True,
+        })
+    
+    return projections
+
+
+@router.get("/projections/{symbol}")
+async def get_price_projections(
+    symbol: str,
+    history_period: str = Query("1y", description="Historical data period: 3m, 6m, 1y, 2y"),
+):
+    """
+    Get price projections/forecasts for a symbol.
+    
+    Returns:
+    - Historical price data
+    - Projected prices for 1 month, 3 months, 6 months, and 1 year ahead
+    - Confidence bands based on historical volatility
+    - Trend direction and strength
+    - Analyst price targets (if available)
+    """
+    try:
+        import yfinance as yf
+        import numpy as np
+        
+        ticker = yf.Ticker(symbol.upper())
+        info = ticker.info
+        
+        if not info or not info.get("symbol"):
+            raise HTTPException(status_code=404, detail=f"Symbol '{symbol}' not found")
+        
+        # Get historical data
+        hist = ticker.history(period=history_period, interval="1d")
+        if hist.empty:
+            raise HTTPException(status_code=404, detail=f"No historical data for '{symbol}'")
+        
+        # Extract prices and dates
+        prices = list(hist['Close'].values)
+        dates = [d.strftime('%Y-%m-%d') for d in hist.index]
+        current_price = float(prices[-1])
+        
+        # Calculate trend metrics
+        slope, intercept = calculate_linear_regression(prices)
+        volatility = calculate_volatility(prices)
+        
+        # Determine trend direction and strength
+        if len(prices) >= 20:
+            short_ma = np.mean(prices[-20:])
+            long_ma = np.mean(prices[-50:]) if len(prices) >= 50 else np.mean(prices)
+            
+            if short_ma > long_ma * 1.02:
+                trend_direction = "bullish"
+                trend_strength = min((short_ma / long_ma - 1) * 10, 1.0)
+            elif short_ma < long_ma * 0.98:
+                trend_direction = "bearish"
+                trend_strength = min((1 - short_ma / long_ma) * 10, 1.0)
+            else:
+                trend_direction = "neutral"
+                trend_strength = 0.3
+        else:
+            trend_direction = "neutral"
+            trend_strength = 0.5
+        
+        # Generate historical data points
+        historical = [
+            {"date": d, "value": round(float(p), 2), "is_projection": False}
+            for d, p in zip(dates, prices)
+        ]
+        
+        # Generate projections for different horizons
+        # Adjust slope based on analyst targets if available
+        analyst_mean_target = info.get("targetMeanPrice", 0)
+        if analyst_mean_target and analyst_mean_target > 0:
+            # Blend linear projection with analyst target
+            implied_annual_return = (analyst_mean_target / current_price) - 1
+            adjusted_slope = (implied_annual_return * current_price) / 252  # Daily slope
+            slope = (slope + adjusted_slope) / 2  # Average of both
+        
+        projection_1m = generate_projections(prices, dates, 22, volatility, slope, intercept)  # ~1 month
+        projection_3m = generate_projections(prices, dates, 66, volatility, slope, intercept)  # ~3 months
+        projection_6m = generate_projections(prices, dates, 126, volatility, slope, intercept)  # ~6 months
+        projection_1y = generate_projections(prices, dates, 252, volatility, slope, intercept)  # ~1 year
+        
+        # Calculate target prices for each horizon
+        def get_target(projections: List[Dict]) -> Dict[str, float]:
+            if not projections:
+                return {"low": current_price, "mid": current_price, "high": current_price}
+            last = projections[-1]
+            return {
+                "low": last.get("low", current_price),
+                "mid": last.get("value", current_price),
+                "high": last.get("high", current_price),
+            }
+        
+        # Get analyst targets
+        analyst_targets = {
+            "low": float(info.get("targetLowPrice") or 0),
+            "mean": float(info.get("targetMeanPrice") or 0),
+            "high": float(info.get("targetHighPrice") or 0),
+            "num_analysts": info.get("numberOfAnalystOpinions", 0),
+            "recommendation": info.get("recommendationKey", "none"),
+        }
+        
+        # Determine confidence based on volatility and data quality
+        if volatility < 0.2:
+            confidence = "high"
+        elif volatility < 0.4:
+            confidence = "medium"
+        else:
+            confidence = "low"
+        
+        return PriceProjectionResponse(
+            symbol=symbol.upper(),
+            current_price=round(current_price, 2),
+            projection_method="trend_extrapolation_with_volatility",
+            confidence=confidence,
+            historical=historical[-252:],  # Last year of history
+            projection_1m=projection_1m,
+            projection_3m=projection_3m,
+            projection_6m=projection_6m,
+            projection_1y=projection_1y,
+            target_1m=get_target(projection_1m),
+            target_3m=get_target(projection_3m),
+            target_6m=get_target(projection_6m),
+            target_1y=get_target(projection_1y),
+            analyst_targets=analyst_targets,
+            trend_direction=trend_direction,
+            trend_strength=round(float(trend_strength), 2),
+            volatility=round(float(volatility * 100), 2),  # As percentage
+            updated_at=datetime.now(timezone.utc).isoformat(),
+        )
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error generating projections for {symbol}: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate projections: {str(e)}")
+

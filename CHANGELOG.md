@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.4] - 2025-12-18
 
+### 🔮 Market Forecasting - Price Projection Charts
+
+#### Extrapolation Forecasting
+- **Time Series Projections**: Extend historical price data into future dates (2026, 2027)
+- **Multiple Horizons**: 1 month, 3 months, 6 months, and 1 year forecasts
+- **Confidence Bands**: Upper/lower price bands based on historical volatility
+- **Trend Extrapolation**: Linear regression with analyst target blending
+- **Interactive Chart**: Visualize historical prices and projected future prices on one chart
+
+#### Target Price Analysis
+- **Bear/Base/Bull Cases**: Three-tier price targets with percentage changes
+- **Analyst Consensus**: Integrated Wall Street analyst price targets
+- **Recommendation Display**: Buy/Hold/Sell ratings with analyst count
+- **Volatility Assessment**: Annualized volatility indicator with color coding
+
+#### Quick Symbol Access
+- **Quick Pick Buttons**: One-click access to popular stocks (NVDA, AAPL, TSLA, etc.)
+- **Enter Key Search**: Press Enter to fetch projections instantly
+- **Error Handling**: Clear error messages for invalid symbols
+
 ### 📊 Stock Analyzer - Comprehensive Time Series Analysis
 
 #### Stock Search & Analysis
