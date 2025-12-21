@@ -38,7 +38,7 @@ export function AIAssistant() {
   const [isExpanded, setIsExpanded] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [providers, setProviders] = useState<ProvidersData | null>(null)
-  const [currentProvider, setCurrentProvider] = useState<LLMProvider>('openai')
+  const [currentProvider, setCurrentProvider] = useState<LLMProvider>('anthropic')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   
   // Voice input state

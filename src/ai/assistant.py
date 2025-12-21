@@ -3,13 +3,16 @@ AI Trading Assistant.
 Provides natural language interface for querying system performance,
 analyzing data sources, and getting optimization recommendations.
 
-Supports multiple LLM providers:
-- OpenAI (GPT-4, GPT-3.5)
-- Ollama (Local LLMs - Llama, Mistral, etc.)
-- Anthropic (Claude)
+Supports multiple LLM providers (priority order):
+1. Anthropic (Claude) - Default, best for trading analysis
+2. Ollama (Local LLMs) - Fallback, bundled with XFactor
+3. OpenAI (GPT-4) - Alternative cloud option
 """
 
 import json
+import subprocess
+import sys
+import os
 from datetime import datetime
 from typing import Any, Literal, Optional
 
@@ -22,6 +25,82 @@ from src.utils.logger import get_logger
 logger = get_logger(__name__)
 
 LLMProvider = Literal["openai", "ollama", "anthropic"]
+
+
+async def ensure_ollama_running() -> bool:
+    """
+    Ensure Ollama is running. If bundled and not running, start it.
+    Returns True if Ollama is available.
+    """
+    settings = get_settings()
+    
+    # Check if already running
+    try:
+        import httpx
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f"{settings.ollama_host}/api/version", timeout=2.0)
+            if response.status_code == 200:
+                logger.info("Ollama is already running")
+                return True
+    except Exception:
+        pass
+    
+    # Try to start Ollama if auto_start is enabled
+    if settings.ollama_auto_start:
+        logger.info("Ollama not running, attempting to start...")
+        try:
+            # Check for bundled Ollama binary
+            bundled_paths = [
+                # macOS app bundle
+                os.path.join(os.path.dirname(sys.executable), "..", "Resources", "ollama"),
+                os.path.join(os.path.dirname(sys.executable), "ollama"),
+                # Linux/Windows
+                os.path.join(os.path.dirname(sys.executable), "ollama"),
+                # Development
+                "/usr/local/bin/ollama",
+                "ollama",  # System PATH
+            ]
+            
+            ollama_binary = None
+            for path in bundled_paths:
+                if os.path.exists(path):
+                    ollama_binary = path
+                    break
+            
+            if ollama_binary is None:
+                # Try system ollama
+                ollama_binary = "ollama"
+            
+            # Start Ollama serve in background
+            subprocess.Popen(
+                [ollama_binary, "serve"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True
+            )
+            
+            # Wait for startup
+            import asyncio
+            for _ in range(10):  # Wait up to 5 seconds
+                await asyncio.sleep(0.5)
+                try:
+                    import httpx
+                    async with httpx.AsyncClient() as client:
+                        response = await client.get(f"{settings.ollama_host}/api/version", timeout=2.0)
+                        if response.status_code == 200:
+                            logger.info("Ollama started successfully")
+                            return True
+                except Exception:
+                    pass
+            
+            logger.warning("Could not start Ollama")
+            return False
+            
+        except Exception as e:
+            logger.error(f"Error starting Ollama: {e}")
+            return False
+    
+    return False
 
 
 class ChatMessage(BaseModel):
@@ -222,6 +301,11 @@ Current system context will be provided with each query."""
         """
         Process a chat query and return AI response.
         
+        Priority order with fallback:
+        1. Use specified provider (or default: Anthropic Claude)
+        2. If primary fails and fallback enabled, try Ollama
+        3. Return error message if all fail
+        
         Args:
             query: The user's question
             session_id: Session identifier for conversation history
@@ -260,32 +344,59 @@ Current system context will be provided with each query."""
             # Add current query
             messages.append({"role": "user", "content": query})
             
-            # Call the appropriate LLM
-            logger.info(f"Calling {current_provider} for chat (session: {session_id})")
+            # Try primary provider, fall back to Ollama if enabled
+            assistant_message = None
+            used_provider = current_provider
             
-            if current_provider == "openai":
-                assistant_message = await self._call_openai(messages)
-            elif current_provider == "ollama":
-                assistant_message = await self._call_ollama(messages)
-            elif current_provider == "anthropic":
-                assistant_message = await self._call_anthropic(messages)
-            else:
-                raise ValueError(f"Unknown LLM provider: {current_provider}")
+            try:
+                logger.info(f"Calling {current_provider} for chat (session: {session_id})")
+                
+                if current_provider == "openai":
+                    assistant_message = await self._call_openai(messages)
+                elif current_provider == "ollama":
+                    assistant_message = await self._call_ollama(messages)
+                elif current_provider == "anthropic":
+                    assistant_message = await self._call_anthropic(messages)
+                else:
+                    raise ValueError(f"Unknown LLM provider: {current_provider}")
+                    
+            except Exception as primary_error:
+                logger.warning(f"Primary provider {current_provider} failed: {primary_error}")
+                
+                # Try fallback to Ollama if enabled and not already using Ollama
+                if self.settings.llm_fallback_to_ollama and current_provider != "ollama":
+                    logger.info("Falling back to Ollama...")
+                    try:
+                        # Ensure Ollama is running
+                        if await ensure_ollama_running():
+                            assistant_message = await self._call_ollama(messages)
+                            used_provider = "ollama"
+                            logger.info("Fallback to Ollama successful")
+                        else:
+                            raise ConnectionError("Ollama not available for fallback")
+                    except Exception as fallback_error:
+                        logger.error(f"Fallback to Ollama also failed: {fallback_error}")
+                        raise primary_error  # Raise original error
+                else:
+                    raise
             
             # Update conversation history
             conversation.add_message("user", query)
             conversation.add_message("assistant", assistant_message)
             
-            logger.info(f"AI chat completed for session {session_id} using {current_provider}")
+            if used_provider != current_provider:
+                assistant_message = f"[Using {used_provider} as fallback]\n\n{assistant_message}"
+            
+            logger.info(f"AI chat completed for session {session_id} using {used_provider}")
             return assistant_message
             
         except ValueError as e:
             logger.error(f"Configuration error: {e}")
-            return f"Configuration error: {str(e)}"
+            return f"Configuration error: {str(e)}\n\n💡 Tip: Set up your AI provider in the Integrations panel, or Ollama will be used as a local fallback."
             
         except ConnectionError as e:
             logger.error(f"Connection error: {e}")
-            return f"Connection error: {str(e)}"
+            return f"Connection error: {str(e)}\n\n💡 Tip: Install Ollama locally for offline AI support: https://ollama.ai"
             
         except Exception as e:
             logger.error(f"AI chat error: {e}")

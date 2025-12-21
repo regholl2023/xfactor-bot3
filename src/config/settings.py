@@ -172,23 +172,27 @@ class Settings(BaseSettings):
     # =========================================================================
     # AI/ML Configuration
     # =========================================================================
-    # LLM Provider: "openai", "ollama", "anthropic"
-    llm_provider: str = Field(default="openai", description="LLM provider to use")
+    # LLM Provider: "anthropic" (Claude - default), "ollama" (local fallback), "openai"
+    # Priority: Anthropic Claude > Ollama (local) > OpenAI
+    llm_provider: str = Field(default="anthropic", description="LLM provider to use (anthropic, ollama, openai)")
+    llm_fallback_to_ollama: bool = Field(default=True, description="Fallback to Ollama if primary provider fails")
+    
+    # Anthropic Claude Configuration (PRIMARY - Default)
+    anthropic_api_key: str = Field(default="", description="Anthropic Claude API key")
+    anthropic_model: str = Field(default="claude-sonnet-4-20250514", description="Anthropic model to use")
+    
+    # Ollama Configuration (Local LLM - Fallback/Bundled)
+    ollama_host: str = Field(default="http://localhost:11434", description="Ollama server URL")
+    ollama_model: str = Field(default="llama3.2", description="Ollama model to use")
+    ollama_timeout: int = Field(default=120, description="Ollama request timeout in seconds")
+    ollama_keep_alive: str = Field(default="5m", description="How long to keep model in memory")
+    ollama_auto_start: bool = Field(default=True, description="Auto-start bundled Ollama if not running")
+    ollama_bundled: bool = Field(default=True, description="Use bundled Ollama binary")
     
     # OpenAI Configuration
     openai_api_key: str = Field(default="", description="OpenAI API key")
     openai_model: str = Field(default="gpt-4-turbo-preview", description="OpenAI model to use")
     openai_base_url: str = Field(default="", description="OpenAI API base URL (for custom endpoints)")
-    
-    # Ollama Configuration (Local LLM)
-    ollama_host: str = Field(default="http://localhost:11434", description="Ollama server URL")
-    ollama_model: str = Field(default="llama3.1", description="Ollama model to use")
-    ollama_timeout: int = Field(default=120, description="Ollama request timeout in seconds")
-    ollama_keep_alive: str = Field(default="5m", description="How long to keep model in memory")
-    
-    # Anthropic Claude Configuration
-    anthropic_api_key: str = Field(default="", description="Anthropic Claude API key")
-    anthropic_model: str = Field(default="claude-3-opus-20240229", description="Anthropic model to use")
     
     # HuggingFace Configuration
     huggingface_api_key: str = Field(default="", description="HuggingFace API key")

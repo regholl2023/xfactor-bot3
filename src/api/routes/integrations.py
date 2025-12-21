@@ -602,47 +602,65 @@ class AIProviderConfigRequest(BaseModel):
 
 @router.get("/ai/providers")
 async def get_ai_providers() -> Dict[str, Any]:
-    """Get all AI providers and their status."""
+    """Get all AI providers and their status.
+    
+    Priority order:
+    1. Anthropic Claude (default, best for trading analysis)
+    2. Ollama (local fallback, bundled with XFactor)
+    3. OpenAI GPT (alternative cloud option)
+    """
     from src.config.settings import get_settings
-    import os
     
     settings = get_settings()
     
     # Check Ollama availability
     ollama_status = "offline"
+    ollama_version = None
     try:
         import httpx
         async with httpx.AsyncClient() as client:
             response = await client.get(f"{settings.ollama_host}/api/version", timeout=2.0)
             if response.status_code == 200:
                 ollama_status = "available"
+                ollama_version = response.json().get("version")
     except Exception:
         pass
     
     return {
         "current_provider": settings.llm_provider,
+        "fallback_enabled": settings.llm_fallback_to_ollama,
         "providers": [
             {
-                "id": "openai",
-                "name": "OpenAI GPT",
-                "configured": bool(settings.openai_api_key),
-                "model": settings.openai_model,
-                "status": "ready" if settings.openai_api_key else "not_configured",
+                "id": "anthropic",
+                "name": "Anthropic Claude",
+                "description": "Best for trading analysis (default)",
+                "configured": bool(settings.anthropic_api_key),
+                "model": settings.anthropic_model,
+                "status": "ready" if settings.anthropic_api_key else "not_configured",
+                "priority": 1,
+                "recommended": True,
             },
             {
                 "id": "ollama",
                 "name": "Ollama (Local)",
+                "description": "Local AI, no API key needed (fallback)",
                 "configured": True,  # Always configured since it's local
                 "model": settings.ollama_model,
                 "host": settings.ollama_host,
                 "status": ollama_status,
+                "version": ollama_version,
+                "auto_start": settings.ollama_auto_start,
+                "priority": 2,
+                "is_fallback": True,
             },
             {
-                "id": "anthropic",
-                "name": "Anthropic Claude",
-                "configured": bool(settings.anthropic_api_key),
-                "model": "claude-3-sonnet",
-                "status": "ready" if settings.anthropic_api_key else "not_configured",
+                "id": "openai",
+                "name": "OpenAI GPT",
+                "description": "Alternative cloud provider",
+                "configured": bool(settings.openai_api_key),
+                "model": settings.openai_model,
+                "status": "ready" if settings.openai_api_key else "not_configured",
+                "priority": 3,
             },
         ]
     }
