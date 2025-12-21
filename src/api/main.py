@@ -170,7 +170,15 @@ def create_app() -> FastAPI:
     
     @app.get("/api")
     async def api_root():
-        return {"status": "ok", "name": "XFactor Bot", "version": APP_VERSION, "description": "AI-Powered Automated Trading System"}
+        # Check for MIN mode based on request origin
+        return {
+            "status": "ok", 
+            "name": "XFactor Bot", 
+            "version": APP_VERSION, 
+            "description": "AI-Powered Automated Trading System",
+            "edition": "MAX",  # Backend always serves MAX - frontend determines MIN based on hostname
+            "note": "Edition determined by frontend based on deployment hostname"
+        }
     
     @app.get("/health")
     async def health():

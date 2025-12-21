@@ -20,6 +20,8 @@ import {
   Crosshair
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import { useDemoMode, useFeatureAvailable } from '../contexts/DemoModeContext'
+import RestrictedFeature from './RestrictedFeature'
 import { PortfolioCard } from './PortfolioCard'
 import { PositionsTable } from './PositionsTable'
 import { StrategyPanel } from './StrategyPanel'
@@ -41,6 +43,9 @@ import ForexPanel from './ForexPanel'
 import StockAnalyzer from './StockAnalyzer'
 
 export function Dashboard() {
+  const { isDemoMode, isUnlocked } = useDemoMode()
+  const { isFullFeaturesAvailable } = useFeatureAvailable()
+  
   // Portfolio data - will be populated when broker is connected
   const [portfolioData, setPortfolioData] = useState({
     totalValue: 0,
@@ -169,49 +174,82 @@ export function Dashboard() {
           </CollapsiblePanel>
         </div>
         
-        {/* Right Column - Controls */}
-        <div className="space-y-4">
-          <CollapsiblePanel 
-            title="Strategy Controls" 
-            icon={<Settings className="h-5 w-5" />}
-            defaultExpanded={true}
-          >
-            <StrategyPanelInner />
-          </CollapsiblePanel>
-          
-          <CollapsiblePanel 
-            title="Risk Management" 
-            icon={<Shield className="h-5 w-5" />}
-            defaultExpanded={false}
-          >
-            <RiskControlsInner />
-          </CollapsiblePanel>
-          
-          <CollapsiblePanel 
-            title="Admin Panel" 
-            icon={<Lock className="h-5 w-5" />}
-            defaultExpanded={false}
-          >
-            <AdminPanelInner />
-          </CollapsiblePanel>
-          
-          <CollapsiblePanel 
-            title="Integrations" 
-            icon={<Wallet className="h-5 w-5" />}
-            defaultExpanded={false}
-          >
-            <IntegrationsPanel />
-          </CollapsiblePanel>
-          
-          <CollapsiblePanel 
-            title="Fees & Expenses" 
-            icon={<DollarSign className="h-5 w-5" />}
-            badge="costs"
-            defaultExpanded={false}
-          >
-            <FeeTracker />
-          </CollapsiblePanel>
-        </div>
+        {/* Right Column - Controls (Hidden in MIN mode unless unlocked) */}
+        {isFullFeaturesAvailable ? (
+          <div className="space-y-4">
+            <CollapsiblePanel 
+              title="Strategy Controls" 
+              icon={<Settings className="h-5 w-5" />}
+              defaultExpanded={true}
+            >
+              <StrategyPanelInner />
+            </CollapsiblePanel>
+            
+            <CollapsiblePanel 
+              title="Risk Management" 
+              icon={<Shield className="h-5 w-5" />}
+              defaultExpanded={false}
+            >
+              <RiskControlsInner />
+            </CollapsiblePanel>
+            
+            <CollapsiblePanel 
+              title="Admin Panel" 
+              icon={<Lock className="h-5 w-5" />}
+              defaultExpanded={false}
+            >
+              <AdminPanelInner />
+            </CollapsiblePanel>
+            
+            <CollapsiblePanel 
+              title="Integrations" 
+              icon={<Wallet className="h-5 w-5" />}
+              defaultExpanded={false}
+            >
+              <IntegrationsPanel />
+            </CollapsiblePanel>
+            
+            <CollapsiblePanel 
+              title="Fees & Expenses" 
+              icon={<DollarSign className="h-5 w-5" />}
+              badge="costs"
+              defaultExpanded={false}
+            >
+              <FeeTracker />
+            </CollapsiblePanel>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {/* MIN Mode - Show locked message */}
+            <div className="bg-card rounded-xl border border-amber-500/30 p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-3 bg-amber-500/20 rounded-full">
+                  <Lock className="h-6 w-6 text-amber-400" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-lg text-amber-400">MIN Mode Active</h3>
+                  <p className="text-sm text-muted-foreground">Admin features are locked</p>
+                </div>
+              </div>
+              <div className="bg-amber-500/10 rounded-lg p-4 mb-4">
+                <h4 className="text-sm font-medium text-amber-400 mb-2">🔒 Locked Features:</h4>
+                <ul className="text-sm text-slate-300 space-y-1">
+                  <li>• Strategy Controls</li>
+                  <li>• Risk Management</li>
+                  <li>• Admin Panel</li>
+                  <li>• Integrations</li>
+                  <li>• Fees & Expenses</li>
+                  <li>• Live Trading Mode</li>
+                  <li>• Broker Connections</li>
+                </ul>
+              </div>
+              <div className="text-xs text-slate-500">
+                <p className="mb-2">🥚 <strong>Easter Egg:</strong> Click the MIN badge in the header 7 times quickly to unlock.</p>
+                <p>All research and analysis features remain available.</p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
       
       {/* Video Platforms Intelligence - NEW v1.0.3 */}
