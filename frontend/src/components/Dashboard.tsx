@@ -3,7 +3,6 @@ import {
   TrendingUp, 
   Bot, 
   Table, 
-  Lock, 
   Newspaper,
   Users,
   Gem,
@@ -15,7 +14,6 @@ import {
   CandlestickChart,
   Crosshair
 } from 'lucide-react'
-import { useDemoMode, useFeatureAvailable } from '../contexts/DemoModeContext'
 import { PortfolioCard } from './PortfolioCard'
 import { PositionsTable } from './PositionsTable'
 import { NewsFeed } from './NewsFeed'
@@ -33,9 +31,6 @@ import ForexPanel from './ForexPanel'
 import StockAnalyzer from './StockAnalyzer'
 
 export function Dashboard() {
-  const { isDemoMode, isUnlocked } = useDemoMode()
-  const { isFullFeaturesAvailable } = useFeatureAvailable()
-  
   // Portfolio data - will be populated when broker is connected
   const [portfolioData, setPortfolioData] = useState({
     totalValue: 0,
@@ -124,80 +119,48 @@ export function Dashboard() {
         <NewsFeed maxItems={100} itemsPerPage={10} />
       </CollapsiblePanel>
       
-      {/* Main Content - Full width in MAX mode, with sidebar in restricted mode */}
-      <div className={`grid gap-4 ${isFullFeaturesAvailable ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-3'}`}>
-        {/* Main Column - Full width when settings moved to Setup page */}
-        <div className={`space-y-4 ${!isFullFeaturesAvailable ? 'lg:col-span-2' : ''}`}>
-          {/* Two-column grid for Equity and Bot Manager in MAX mode */}
-          <div className={`grid gap-4 ${isFullFeaturesAvailable ? 'grid-cols-1 xl:grid-cols-2' : 'grid-cols-1'}`}>
-            <CollapsiblePanel 
-              title="Equity Curve" 
-              icon={<TrendingUp className="h-5 w-5" />}
-              defaultExpanded={true}
-            >
-              <EquityChart height={280} />
-            </CollapsiblePanel>
-            
-            <CollapsiblePanel 
-              title="Bot Manager" 
-              icon={<Bot className="h-5 w-5" />}
-              badge="40"
-              defaultExpanded={true}
-            >
-              <BotManagerInner />
-            </CollapsiblePanel>
-          </div>
+      {/* Main Content - Always full width (Settings moved to Setup page) */}
+      <div className="space-y-4">
+        {/* Two-column grid for Equity and Bot Manager */}
+        <div className="grid gap-4 grid-cols-1 xl:grid-cols-2">
+          <CollapsiblePanel 
+            title="Equity Curve" 
+            icon={<TrendingUp className="h-5 w-5" />}
+            defaultExpanded={true}
+          >
+            <EquityChart height={280} />
+          </CollapsiblePanel>
           
-          {/* Two-column grid for Agentic Tuning and Positions in MAX mode */}
-          <div className={`grid gap-4 ${isFullFeaturesAvailable ? 'grid-cols-1 xl:grid-cols-2' : 'grid-cols-1'}`}>
-            <CollapsiblePanel 
-              title="Agentic Tuning" 
-              icon={<Brain className="h-5 w-5" />}
-              badge="ATRWAC"
-              defaultExpanded={false}
-            >
-              <AgenticTuning />
-            </CollapsiblePanel>
-            
-            <CollapsiblePanel 
-              title="Open Positions" 
-              icon={<Table className="h-5 w-5" />}
-              badge={portfolioData.openPositions}
-              defaultExpanded={false}
-            >
-              <PositionsTableInner />
-            </CollapsiblePanel>
-          </div>
+          <CollapsiblePanel 
+            title="Bot Manager" 
+            icon={<Bot className="h-5 w-5" />}
+            badge="40"
+            defaultExpanded={true}
+          >
+            <BotManagerInner />
+          </CollapsiblePanel>
         </div>
         
-        {/* Right Column - Only shown in restricted mode */}
-        {!isFullFeaturesAvailable && (
-          <div className="space-y-4">
-            {/* Restricted Mode - Show info message */}
-            <div className="bg-card rounded-xl border border-slate-600 p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-3 bg-slate-700 rounded-full">
-                  <Lock className="h-6 w-6 text-slate-400" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-lg text-slate-300">Available Features</h3>
-                  <p className="text-sm text-muted-foreground">Additional trading features require authentication</p>
-                </div>
-              </div>
-              <div className="bg-slate-800 rounded-lg p-4">
-                <h4 className="text-sm font-medium text-slate-400 mb-2">Available Features:</h4>
-                <ul className="text-sm text-slate-400 space-y-1">
-                  <li>✓ AI Market Forecasting</li>
-                  <li>✓ News & Sentiment Analysis</li>
-                  <li>✓ Stock Analyzer</li>
-                  <li>✓ Video Platforms Intelligence</li>
-                  <li>✓ Forex & Crypto Research</li>
-                  <li>✓ Trading Glossary (500+ terms)</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Two-column grid for Agentic Tuning and Positions */}
+        <div className="grid gap-4 grid-cols-1 xl:grid-cols-2">
+          <CollapsiblePanel 
+            title="Agentic Tuning" 
+            icon={<Brain className="h-5 w-5" />}
+            badge="ATRWAC"
+            defaultExpanded={false}
+          >
+            <AgenticTuning />
+          </CollapsiblePanel>
+          
+          <CollapsiblePanel 
+            title="Open Positions" 
+            icon={<Table className="h-5 w-5" />}
+            badge={portfolioData.openPositions}
+            defaultExpanded={false}
+          >
+            <PositionsTableInner />
+          </CollapsiblePanel>
+        </div>
       </div>
       
       {/* Video Platforms Intelligence - NEW v1.0.3 */}
