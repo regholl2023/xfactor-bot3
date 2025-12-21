@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Pause, Power, Play, Lock, ShieldAlert, HelpCircle, Sparkles, Shield, X } from 'lucide-react'
+import { Pause, Power, Play, Lock, ShieldAlert, HelpCircle, Sparkles, Shield, X, Settings } from 'lucide-react'
 import { TradingModeSelector } from './TradingModeSelector'
 import { useAuth } from '../context/AuthContext'
 import { useDemoMode } from '../contexts/DemoModeContext'
@@ -11,9 +11,11 @@ type WSState = 'connecting' | 'connected' | 'disconnected' | 'error'
 interface HeaderProps {
   connected: boolean
   wsState?: WSState
+  onSettingsClick?: () => void
+  showSettingsButton?: boolean
 }
 
-export function Header({ connected, wsState = 'disconnected' }: HeaderProps) {
+export function Header({ connected, wsState = 'disconnected', onSettingsClick, showSettingsButton = true }: HeaderProps) {
   const { isAuthenticated, token } = useAuth()
   const { edition, isDemoMode, isUnlocked, lock, incrementEasterEgg, showUnlockPrompt, setShowUnlockPrompt, easterEggClicks } = useDemoMode()
   const [logoError, setLogoError] = useState(false)
@@ -188,6 +190,18 @@ export function Header({ connected, wsState = 'disconnected' }: HeaderProps) {
                 <Power className="h-4 w-4" />
                 Kill Switch
               </button>
+              
+              {/* Settings Button */}
+              {showSettingsButton && onSettingsClick && (
+                <button 
+                  onClick={onSettingsClick}
+                  className="flex items-center gap-2 rounded-lg bg-teal-500/20 border border-teal-500/30 px-4 py-2 text-sm text-teal-400 hover:bg-teal-500/30 hover:text-teal-300 transition-all"
+                  title="Settings & Configuration"
+                >
+                  <Settings className="h-4 w-4" />
+                  Setup
+                </button>
+              )}
               
               {/* Help Button */}
               <button 

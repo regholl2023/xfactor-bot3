@@ -2,11 +2,15 @@ import { useEffect, useState, useRef, useCallback } from 'react'
 import { Dashboard } from './components/Dashboard'
 import { Header } from './components/Header'
 import { AIAssistant } from './components/AIAssistant'
+import { SettingsPage } from './components/SettingsPage'
 import { AuthProvider } from './context/AuthContext'
 import { TradingModeProvider } from './context/TradingModeContext'
 import { DemoModeProvider } from './contexts/DemoModeContext'
 import DemoModeBanner from './components/DemoModeBanner'
 import { getWsBaseUrl, getApiBaseUrl } from './config/api'
+
+// Page types
+type PageType = 'dashboard' | 'settings'
 
 // WebSocket connection states
 type WSState = 'connecting' | 'connected' | 'disconnected' | 'error'
@@ -17,6 +21,7 @@ const isTauri = typeof window !== 'undefined' && !!(window as any).__TAURI__
 function App() {
   const [connected, setConnected] = useState(false)
   const [wsState, setWsState] = useState<WSState>('disconnected')
+  const [currentPage, setCurrentPage] = useState<PageType>('dashboard')
   const wsRef = useRef<WebSocket | null>(null)
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const reconnectAttempts = useRef(0)
@@ -462,9 +467,18 @@ function App() {
         <TradingModeProvider>
           <div className="min-h-screen bg-background">
             <DemoModeBanner />
-            <Header connected={connected} wsState={wsState} />
+            <Header 
+              connected={connected} 
+              wsState={wsState} 
+              onSettingsClick={() => setCurrentPage('settings')}
+              showSettingsButton={currentPage === 'dashboard'}
+            />
             <main className="container mx-auto p-4">
-              <Dashboard />
+              {currentPage === 'dashboard' ? (
+                <Dashboard />
+              ) : (
+                <SettingsPage onBack={() => setCurrentPage('dashboard')} />
+              )}
             </main>
             <AIAssistant />
           </div>
