@@ -220,32 +220,27 @@ export function Dashboard() {
           </div>
         ) : (
           <div className="space-y-4">
-            {/* MIN Mode - Show locked message */}
-            <div className="bg-card rounded-xl border border-amber-500/30 p-6">
+            {/* Restricted Mode - Show info message */}
+            <div className="bg-card rounded-xl border border-slate-600 p-6">
               <div className="flex items-center gap-3 mb-4">
-                <div className="p-3 bg-amber-500/20 rounded-full">
-                  <Lock className="h-6 w-6 text-amber-400" />
+                <div className="p-3 bg-slate-700 rounded-full">
+                  <Lock className="h-6 w-6 text-slate-400" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-lg text-amber-400">MIN Mode Active</h3>
-                  <p className="text-sm text-muted-foreground">Admin features are locked</p>
+                  <h3 className="font-semibold text-lg text-slate-300">Research Mode</h3>
+                  <p className="text-sm text-muted-foreground">Trading features not available in this deployment</p>
                 </div>
               </div>
-              <div className="bg-amber-500/10 rounded-lg p-4 mb-4">
-                <h4 className="text-sm font-medium text-amber-400 mb-2">🔒 Locked Features:</h4>
-                <ul className="text-sm text-slate-300 space-y-1">
-                  <li>• Strategy Controls</li>
-                  <li>• Risk Management</li>
-                  <li>• Admin Panel</li>
-                  <li>• Integrations</li>
-                  <li>• Fees & Expenses</li>
-                  <li>• Live Trading Mode</li>
-                  <li>• Broker Connections</li>
+              <div className="bg-slate-800 rounded-lg p-4">
+                <h4 className="text-sm font-medium text-slate-400 mb-2">Available Features:</h4>
+                <ul className="text-sm text-slate-400 space-y-1">
+                  <li>✓ AI Market Forecasting</li>
+                  <li>✓ News & Sentiment Analysis</li>
+                  <li>✓ Stock Analyzer</li>
+                  <li>✓ Video Platforms Intelligence</li>
+                  <li>✓ Forex & Crypto Research</li>
+                  <li>✓ Trading Glossary (500+ terms)</li>
                 </ul>
-              </div>
-              <div className="text-xs text-slate-500">
-                <p className="mb-2">🥚 <strong>Easter Egg:</strong> Click the MIN badge in the header 7 times quickly to unlock.</p>
-                <p>All research and analysis features remain available.</p>
               </div>
             </div>
           </div>

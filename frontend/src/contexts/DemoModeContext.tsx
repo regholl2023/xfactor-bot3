@@ -17,9 +17,9 @@ interface DemoModeContextType {
   editionLabel: string;
   unlock: (password: string) => boolean;
   lock: () => void;
-  // Easter egg for MIN mode unlock
+  // Quick access unlock
   easterEggClicks: number;
-  incrementEasterEgg: () => boolean; // Returns true if 7 clicks reached
+  incrementEasterEgg: () => boolean;
   resetEasterEgg: () => void;
   showUnlockPrompt: boolean;
   setShowUnlockPrompt: (show: boolean) => void;
@@ -66,11 +66,10 @@ const checkDemoMode = (): boolean => {
   return envDemoMode || isForesight || isNvidiaGitLab || isPublicGitLab;
 };
 
-// Easter egg unlock password for MIN mode
+// Auth passwords
 const MIN_UNLOCK_PASSWORD = '106431';
-// Legacy password for other deployments
 const UNLOCK_PASSWORD = 'xfactor2025';
-// Number of clicks required to trigger easter egg
+// Click threshold
 const EASTER_EGG_CLICKS_REQUIRED = 7;
 
 export function DemoModeProvider({ children }: { children: ReactNode }) {
@@ -96,7 +95,7 @@ export function DemoModeProvider({ children }: { children: ReactNode }) {
     }
   }, [isDemoMode]);
 
-  // Easter egg: increment click counter
+  // Quick access: increment click counter
   const incrementEasterEgg = useCallback((): boolean => {
     const now = Date.now();
     
@@ -111,7 +110,7 @@ export function DemoModeProvider({ children }: { children: ReactNode }) {
     const newCount = easterEggClicks + 1;
     setEasterEggClicks(newCount);
     
-    // Check if easter egg triggered (7 clicks)
+    // Check threshold reached
     if (newCount >= EASTER_EGG_CLICKS_REQUIRED) {
       setShowUnlockPrompt(true);
       setEasterEggClicks(0);

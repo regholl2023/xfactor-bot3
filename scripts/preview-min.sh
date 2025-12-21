@@ -1,13 +1,5 @@
 #!/bin/bash
-# XFactor Bot MIN Preview - Test MIN mode locally
-# This script builds and runs the MIN version for local preview
-#
-# MIN Mode Features:
-# - Broker connections disabled (locked behind easter egg)
-# - Live trading disabled (locked behind easter egg)  
-# - Easter egg: Click MIN badge 7 times to unlock prompt
-# - Unlock password: 106431
-#
+# XFactor Bot Research Preview - Test research mode locally
 # Usage: ./scripts/preview-min.sh
 
 set -e
@@ -16,21 +8,15 @@ LOCAL_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$LOCAL_DIR"
 
 echo "╔════════════════════════════════════════════════════════════╗"
-echo "║      XFactor Bot MIN Preview - Local Testing               ║"
+echo "║      XFactor Bot Research Preview - Local Testing          ║"
 echo "╚════════════════════════════════════════════════════════════╝"
-echo ""
-echo "🔒 MIN Mode Preview:"
-echo "   • Broker connections: DISABLED"
-echo "   • Live trading: DISABLED"
-echo "   • Easter egg: Click MIN badge 7 times"
-echo "   • Unlock password: 106431"
 echo ""
 
 # Step 1: Build frontend with DEMO_MODE=true
-echo "🔨 Step 1: Building frontend for MIN mode..."
+echo "🔨 Step 1: Building frontend..."
 cd "$LOCAL_DIR/frontend"
 VITE_DEMO_MODE=true npm run build
-echo "✅ Frontend built for MIN mode"
+echo "✅ Frontend built"
 echo ""
 
 # Step 2: Start backend
@@ -71,16 +57,12 @@ echo ""
 sleep 3
 
 echo "╔════════════════════════════════════════════════════════════╗"
-echo "║          🎉 MIN Preview Ready!                             ║"
+echo "║          🎉 Research Preview Ready!                        ║"
 echo "╠════════════════════════════════════════════════════════════╣"
 echo "║                                                            ║"
 echo "║  🌐 Frontend: http://localhost:5173                        ║"
 echo "║  🔧 Backend:  http://localhost:8000                        ║"
 echo "║  📚 API Docs: http://localhost:8000/docs                   ║"
-echo "║                                                            ║"
-echo "║  To unlock full features:                                  ║"
-echo "║  1. Click the MIN badge 7 times quickly                    ║"
-echo "║  2. Enter password: 106431                                 ║"
 echo "║                                                            ║"
 echo "║  To stop: ./scripts/stop-min-preview.sh                    ║"
 echo "║                                                            ║"
@@ -89,4 +71,3 @@ echo ""
 echo "Opening browser..."
 sleep 1
 open http://localhost:5173 2>/dev/null || xdg-open http://localhost:5173 2>/dev/null || echo "Please open http://localhost:5173 manually"
-

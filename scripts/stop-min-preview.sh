@@ -1,7 +1,7 @@
 #!/bin/bash
-# Stop XFactor Bot MIN Preview
+# Stop XFactor Bot Research Preview
 
-echo "Stopping XFactor Bot MIN Preview..."
+echo "Stopping XFactor Bot Research Preview..."
 
 # Stop backend
 if [ -f /tmp/xfactor-api.pid ]; then
@@ -17,5 +17,4 @@ if [ -f /tmp/xfactor-frontend.pid ]; then
 fi
 pkill -f 'vite.*5173' 2>/dev/null || true
 
-echo "✅ XFactor Bot MIN Preview stopped"
-
+echo "✅ XFactor Bot Research Preview stopped"

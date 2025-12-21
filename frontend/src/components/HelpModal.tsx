@@ -107,10 +107,6 @@ const changelog = [
     version: '1.0.9',
     date: 'December 21, 2025',
     changes: [
-      '🔒 XFactor-botMin Deployment Mode',
-      'MIN mode for foresight.nvidia.com with restricted features',
-      'Easter egg unlock: Click MIN badge 7x → Password unlock',
-      'Broker connections and Live trading locked until unlocked',
       '🎤 Voice & Audio Features',
       'Audio readout for news headlines, AI responses, glossary terms',
       'Voice input for AI Assistant and glossary search',

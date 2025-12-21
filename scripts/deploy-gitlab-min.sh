@@ -1,9 +1,6 @@
 #!/bin/bash
-# XFactor Bot MIN Version - GitLab Deployment
+# XFactor Bot - GitLab Deployment
 # Deploy to: https://gitlab-master.nvidia.com/cvanthin/000_trading
-#
-# This script prepares the MIN version for GitLab Pages or GitLab CI/CD deployment
-# NOT for GitHub - GitHub gets the MAX version only
 
 set -e
 
@@ -11,39 +8,32 @@ LOCAL_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$LOCAL_DIR"
 
 echo "╔════════════════════════════════════════════════════════════╗"
-echo "║      XFactor Bot MIN - GitLab Deployment Preparation       ║"
+echo "║      XFactor Bot - GitLab Deployment Preparation           ║"
 echo "║                     Version: 1.0.9                          ║"
 echo "╚════════════════════════════════════════════════════════════╝"
 echo ""
-echo "🔒 MIN Mode Features:"
-echo "   • Broker connections: DISABLED (locked)"
-echo "   • Live trading: DISABLED (locked)"
-echo "   • Easter egg: Click MIN badge 7 times"
-echo "   • Unlock password: 106431"
-echo ""
 
-# Step 1: Build MIN version frontend
-echo "🔨 Step 1: Building MIN version frontend..."
+# Step 1: Build research version frontend
+echo "🔨 Step 1: Building frontend..."
 cd "$LOCAL_DIR/frontend"
 VITE_DEMO_MODE=true npm run build
-echo "✅ Frontend built with VITE_DEMO_MODE=true"
+echo "✅ Frontend built"
 cd "$LOCAL_DIR"
 echo ""
 
-# Step 2: Copy MIN build to releases folder
-echo "📦 Step 2: Copying MIN build to releases/1.0.9/min-build..."
-mkdir -p releases/1.0.9/min-build
-rm -rf releases/1.0.9/min-build/*
-cp -r frontend/dist/* releases/1.0.9/min-build/
-echo "✅ MIN build copied"
+# Step 2: Copy build to releases folder
+echo "📦 Step 2: Copying build to releases/1.0.9/research-build..."
+mkdir -p releases/1.0.9/research-build
+rm -rf releases/1.0.9/research-build/*
+cp -r frontend/dist/* releases/1.0.9/research-build/
+echo "✅ Build copied"
 echo ""
 
 # Step 3: Create GitLab-specific .gitlab-ci.yml if not exists
 if [ ! -f ".gitlab-ci.yml" ]; then
     echo "📝 Step 3: Creating .gitlab-ci.yml for GitLab Pages..."
     cat > .gitlab-ci.yml << 'CIFILE'
-# XFactor Bot MIN - GitLab CI/CD Configuration
-# Deploys MIN version (restricted features) to GitLab Pages
+# XFactor Bot - GitLab CI/CD Configuration
 
 stages:
   - build
@@ -102,17 +92,16 @@ echo "║  SSH_PASS='pass' ./scripts/deploy-foresight.sh             ║"
 echo "║                                                            ║"
 echo "║  Option 3: Manual deployment                               ║"
 echo "║  ─────────────────────────────────────────────────         ║"
-echo "║  1. Copy releases/1.0.9/min-build/* to server              ║"
+echo "║  1. Copy releases/1.0.9/research-build/* to server         ║"
 echo "║  2. Serve with nginx/apache at port 9876                   ║"
 echo "║                                                            ║"
 echo "╚════════════════════════════════════════════════════════════╝"
 echo ""
-echo "MIN build ready at: releases/1.0.9/min-build/"
+echo "Build ready at: releases/1.0.9/research-build/"
 echo ""
 
-# Rebuild MAX version for localhost
-echo "🔄 Rebuilding MAX version for localhost..."
+# Rebuild standard version for localhost
+echo "🔄 Rebuilding standard version for localhost..."
 cd "$LOCAL_DIR/frontend"
 npm run build > /dev/null 2>&1
-echo "✅ MAX version restored to frontend/dist/"
-
+echo "✅ Standard version restored to frontend/dist/"

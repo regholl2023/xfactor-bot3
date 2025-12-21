@@ -22,7 +22,7 @@ export function Header({ connected, wsState = 'disconnected' }: HeaderProps) {
   const [isPaused, setIsPaused] = useState(false)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
 
-  // Handle easter egg click on MIN badge
+  // Handle badge interaction
   const handleMinBadgeClick = () => {
     if (edition === 'XFactor-botMin' && !isUnlocked) {
       incrementEasterEgg()
@@ -99,32 +99,24 @@ export function Header({ connected, wsState = 'disconnected' }: HeaderProps) {
                 <h1 className="text-lg font-bold xfactor-title tracking-wide">
                   THE XFACTOR BOT
                 </h1>
-                {/* Edition Badge - MIN badge is clickable for easter egg */}
+                {/* Edition Badge */}
                 <span 
                   onClick={handleMinBadgeClick}
                   className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 select-none ${
                     edition === 'XFactor-botMax' 
-                      ? 'bg-gradient-to-r from-emerald-500/20 to-teal-500/20 text-emerald-400 border border-emerald-500/30'
-                      : isDemoMode && !isUnlocked
-                        ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 cursor-pointer hover:bg-yellow-500/30 transition-colors'
-                        : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                      ? 'bg-gradient-to-r from-teal-500/20 to-cyan-500/20 text-teal-400 border border-teal-500/30'
+                      : 'bg-slate-700/50 text-slate-400 border border-slate-600'
                   }`}
-                  title={edition === 'XFactor-botMin' && !isUnlocked ? 
-                    (easterEggClicks > 0 ? `${7 - easterEggClicks} more...` : 'Click to explore') : 
-                    undefined
-                  }
                 >
                   {edition === 'XFactor-botMax' ? (
-                    <><Sparkles className="h-3 w-3" /> MAX</>
-                  ) : isUnlocked ? (
-                    <><Sparkles className="h-3 w-3" /> MIN+</>
+                    <><Sparkles className="h-3 w-3" /> PRO</>
                   ) : (
-                    <><Shield className="h-3 w-3" /> MIN</>
+                    <><Shield className="h-3 w-3" /> RESEARCH</>
                   )}
                 </span>
               </div>
               <span className="text-xs text-muted-foreground">
-                AI-Powered Trading System {edition === 'XFactor-botMax' ? '• Full Features' : '• Restricted Mode'}
+                AI-Powered Trading System
               </span>
             </div>
             
@@ -252,7 +244,7 @@ export function Header({ connected, wsState = 'disconnected' }: HeaderProps) {
       {/* Help Modal */}
       <HelpModal isOpen={showHelpModal} onClose={() => setShowHelpModal(false)} />
 
-      {/* Unlock Modal for Easter Egg */}
+      {/* Unlock Modal */}
       <UnlockModal isOpen={showUnlockPrompt} onClose={() => setShowUnlockPrompt(false)} />
     </>
   )

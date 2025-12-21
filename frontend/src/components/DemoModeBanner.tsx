@@ -7,8 +7,7 @@ export default function DemoModeBanner() {
   // The locked features panel in Dashboard provides clear guidance
   if (!isDemoMode || isUnlocked) return null;
 
-  // Return nothing - no banner for MIN mode
-  // Easter egg hint is in the Dashboard's locked panel
+  // No banner in restricted mode
   return null;
 }
 

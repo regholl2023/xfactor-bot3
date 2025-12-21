@@ -1,15 +1,6 @@
 #!/bin/bash
-# XFactor Bot MIN Deployment to foresight.nvidia.com
-# This deploys the XFactor-botMin version with restricted features
+# XFactor Bot Deployment to foresight.nvidia.com
 # Usage: SSH_PASS='yourpassword' ./scripts/deploy-foresight.sh
-#
-# MIN Mode Features:
-# - Broker connections disabled (locked behind easter egg)
-# - Live trading disabled (locked behind easter egg)
-# - Easter egg: Click MIN badge 7 times to unlock prompt
-# - Unlock password: 106431
-#
-# All Help features and new features are included
 
 set -e
 
@@ -35,19 +26,16 @@ SCP_CMD="sshpass -p '$SSH_PASS' scp -o StrictHostKeyChecking=no"
 RSYNC_CMD="sshpass -p '$SSH_PASS' rsync -e 'ssh -o StrictHostKeyChecking=no'"
 
 echo "╔════════════════════════════════════════════════════════════╗"
-echo "║     XFactor Bot MIN Deployment to foresight.nvidia.com   ║"
+echo "║     XFactor Bot Deployment to foresight.nvidia.com        ║"
 echo "║                    Version: $VERSION                      ║"
 echo "╚════════════════════════════════════════════════════════════╝"
 echo ""
-echo "🔒 MIN Mode: Broker connections and Live trading disabled"
-echo "🔓 Easter egg: Click MIN badge 7x → Password: 106431"
-echo ""
 
-# Step 0: Build frontend with DEMO_MODE=true
-echo "🔨 Step 0: Building frontend for MIN mode..."
+# Step 0: Build frontend
+echo "🔨 Step 0: Building frontend..."
 cd "$LOCAL_DIR/frontend"
 VITE_DEMO_MODE=true npm run build
-echo "✅ Frontend built for MIN mode"
+echo "✅ Frontend built"
 cd "$LOCAL_DIR"
 echo ""
 
@@ -101,8 +89,8 @@ echo '✅ Python environment ready'"
 
 # Step 5: Set up frontend (built assets already uploaded)
 echo ""
-echo "🎨 Step 5: Frontend setup (pre-built for MIN mode)..."
-echo "✅ Frontend assets deployed (built locally with VITE_DEMO_MODE=true)"
+echo "🎨 Step 5: Frontend setup..."
+echo "✅ Frontend assets deployed"
 
 # Step 6: Create start/stop scripts
 echo ""
@@ -165,12 +153,6 @@ echo "╠═══════════════════════�
 echo "║                                                            ║"
 echo "║  🌐 XFactor Bot: http://foresight.nvidia.com:9876          ║"
 echo "║  📚 API Docs:    http://foresight.nvidia.com:9876/docs     ║"
-echo "║                                                            ║"
-echo "║  🔒 MIN Mode Active:                                       ║"
-echo "║     • Broker connections: LOCKED                           ║"
-echo "║     • Live trading: LOCKED                                 ║"
-echo "║     • Easter egg: Click MIN badge 7x                       ║"
-echo "║     • Password: 106431                                     ║"
 echo "║                                                            ║"
 echo "║  Commands:                                                 ║"
 echo "║  • Start: ssh $REMOTE_USER@$REMOTE_HOST '$REMOTE_DIR/start.sh'  ║"

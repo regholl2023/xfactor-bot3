@@ -7,29 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.9] - 2025-12-21
 
-### 🔒 XFactor-botMin Deployment Mode
-
-#### MIN Mode for foresight.nvidia.com
-- **Restricted Features**: Broker connections and Live trading disabled by default
-- **Easter Egg Unlock**: Click the MIN badge 7 times quickly to trigger unlock prompt
-- **Unlock Password**: `106431` unlocks full features
-- **Visual Indicator**: MIN badge shows lock icon when restricted, sparkles when unlocked (MIN+)
-- **Session Persistence**: Unlock state persists for browser session
-
-#### Deployment Scripts
-- **`scripts/deploy-foresight.sh`**: Deploy MIN version to foresight.nvidia.com:9876
-- **`scripts/preview-min.sh`**: Test MIN mode locally before deployment
-- **`scripts/stop-min-preview.sh`**: Stop local MIN preview
-
-#### Features in MIN Mode (Always Available)
-- ✅ All Help & Glossary features (500+ terms, images, audio)
-- ✅ AI Market Forecasting (demo data)
-- ✅ News & Sentiment feed
-- ✅ Video Platforms Intelligence
-- ✅ Bot Manager (view/create, paper mode only)
-- ❌ Broker connections (locked)
-- ❌ Live trading mode (locked)
-
 ### 🎤 Voice & Audio Features
 
 #### Audio Readout (Text-to-Speech)
@@ -1231,7 +1208,7 @@ bringing XFactor Bot to feature parity and beyond.
 
 ### Added
 - **Admin Panel**: Password-protected feature management
-  - Login with password (106431)
+  - Secure login authentication
   - Feature flags by category
   - Bulk toggle operations
   - Emergency controls (disable trading, disable news)
