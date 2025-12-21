@@ -15,7 +15,7 @@ interface HeaderProps {
 
 export function Header({ connected, wsState = 'disconnected' }: HeaderProps) {
   const { isAuthenticated, token } = useAuth()
-  const { edition, isDemoMode, isUnlocked, incrementEasterEgg, showUnlockPrompt, setShowUnlockPrompt, easterEggClicks } = useDemoMode()
+  const { edition, isDemoMode, isUnlocked, lock, incrementEasterEgg, showUnlockPrompt, setShowUnlockPrompt, easterEggClicks } = useDemoMode()
   const [logoError, setLogoError] = useState(false)
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [showHelpModal, setShowHelpModal] = useState(false)
@@ -114,6 +114,22 @@ export function Header({ connected, wsState = 'disconnected' }: HeaderProps) {
                     <><Shield className="h-3 w-3" /> RESEARCH</>
                   )}
                 </span>
+                {/* Lock/Logout button when unlocked in restricted mode */}
+                {isDemoMode && isUnlocked && (
+                  <button
+                    onClick={() => {
+                      if (confirm('Lock features and return to research mode?')) {
+                        lock()
+                        window.location.reload()
+                      }
+                    }}
+                    className="text-[10px] font-medium px-2 py-0.5 rounded-full flex items-center gap-1 bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 transition-colors"
+                    title="Lock and return to research mode"
+                  >
+                    <Lock className="h-3 w-3" />
+                    Lock
+                  </button>
+                )}
               </div>
               <span className="text-xs text-muted-foreground">
                 AI-Powered Trading System
