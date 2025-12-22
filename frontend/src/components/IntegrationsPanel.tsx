@@ -114,12 +114,14 @@ export function IntegrationsPanel() {
     }
   }
   
-  const testProvider = async (provider: string) => {
+  const testProvider = async (provider: string, testConfig?: Record<string, string>) => {
     setTesting(provider)
     setTestResult(null)
     try {
       const response = await fetch(`${getApiBaseUrl()}/api/integrations/ai/providers/${provider}/test`, {
-        method: 'POST'
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(testConfig || {})
       })
       const data = await response.json()
       setTestResult(data)
@@ -346,7 +348,7 @@ export function IntegrationsPanel() {
           
           <div className="flex gap-2">
             <button
-              onClick={() => testProvider('anthropic')}
+              onClick={() => testProvider('anthropic', { api_key: anthropicKey })}
               disabled={testing === 'anthropic' || !anthropicKey}
               className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm disabled:opacity-50 flex items-center justify-center gap-2"
             >
@@ -423,7 +425,7 @@ export function IntegrationsPanel() {
           
           <div className="flex gap-2">
             <button
-              onClick={() => testProvider('openai')}
+              onClick={() => testProvider('openai', { api_key: openaiKey })}
               disabled={testing === 'openai' || !openaiKey}
               className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm disabled:opacity-50 flex items-center justify-center gap-2"
             >

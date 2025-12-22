@@ -667,34 +667,51 @@ async def get_ai_providers() -> Dict[str, Any]:
     }
 
 
+class TestProviderRequest(BaseModel):
+    """Optional request body for testing AI provider with custom credentials."""
+    api_key: Optional[str] = None
+    host: Optional[str] = None
+
+
 @router.post("/ai/providers/{provider}/test")
-async def test_ai_provider(provider: str) -> Dict[str, Any]:
-    """Test an AI provider connection."""
+async def test_ai_provider(provider: str, request: Optional[TestProviderRequest] = None) -> Dict[str, Any]:
+    """Test an AI provider connection.
+    
+    Optionally accepts credentials in the request body to test before saving.
+    If no credentials provided, tests with saved configuration.
+    """
     from src.config.settings import get_settings
     
     settings = get_settings()
     
+    # Use provided credentials or fall back to saved settings
+    test_api_key = request.api_key if request and request.api_key else None
+    test_host = request.host if request and request.host else None
+    
     if provider == "openai":
-        if not settings.openai_api_key:
+        api_key = test_api_key or settings.openai_api_key
+        if not api_key:
             return {"status": "error", "message": "OpenAI API key not configured. Set OPENAI_API_KEY in .env"}
         try:
             import httpx
             async with httpx.AsyncClient() as client:
                 response = await client.get(
                     "https://api.openai.com/v1/models",
-                    headers={"Authorization": f"Bearer {settings.openai_api_key}"},
+                    headers={"Authorization": f"Bearer {api_key}"},
                     timeout=10.0
                 )
                 if response.status_code == 200:
                     return {"status": "success", "message": "OpenAI connection successful"}
+                elif response.status_code == 401:
+                    return {"status": "error", "message": "Invalid API key"}
                 else:
                     return {"status": "error", "message": f"OpenAI API error: {response.status_code}"}
         except Exception as e:
             return {"status": "error", "message": f"Failed to connect to OpenAI: {str(e)}"}
     
     elif provider == "ollama":
-        # Use resolved host for Docker compatibility (localhost -> host.docker.internal)
-        ollama_host = settings.ollama_host_resolved
+        # Use provided host or resolved host for Docker compatibility
+        ollama_host = test_host or settings.ollama_host_resolved
         try:
             import httpx
             async with httpx.AsyncClient() as client:
@@ -723,7 +740,8 @@ async def test_ai_provider(provider: str) -> Dict[str, Any]:
             return {"status": "error", "message": f"Ollama not running at {settings.ollama_host}. Start Ollama first."}
     
     elif provider == "anthropic":
-        if not settings.anthropic_api_key:
+        api_key = test_api_key or settings.anthropic_api_key
+        if not api_key:
             return {"status": "error", "message": "Anthropic API key not configured. Set ANTHROPIC_API_KEY in .env"}
         try:
             import httpx
@@ -731,7 +749,7 @@ async def test_ai_provider(provider: str) -> Dict[str, Any]:
                 response = await client.get(
                     "https://api.anthropic.com/v1/models",
                     headers={
-                        "x-api-key": settings.anthropic_api_key,
+                        "x-api-key": api_key,
                         "anthropic-version": "2023-06-01"
                     },
                     timeout=10.0
@@ -739,6 +757,8 @@ async def test_ai_provider(provider: str) -> Dict[str, Any]:
                 # Anthropic might return 404 for /models but we just check auth
                 if response.status_code in [200, 404]:
                     return {"status": "success", "message": "Anthropic API key is valid"}
+                elif response.status_code == 401:
+                    return {"status": "error", "message": "Invalid API key"}
                 else:
                     return {"status": "error", "message": f"Anthropic API error: {response.status_code}"}
         except Exception as e:
