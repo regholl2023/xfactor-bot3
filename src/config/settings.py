@@ -183,7 +183,7 @@ class Settings(BaseSettings):
     
     # Ollama Configuration (Local LLM - Fallback/Bundled)
     ollama_host: str = Field(default="http://localhost:11434", description="Ollama server URL")
-    ollama_model: str = Field(default="llama3.2", description="Ollama model to use")
+    ollama_model: str = Field(default="mistral:latest", description="Ollama model to use (mistral is fast and reliable)")
     ollama_timeout: int = Field(default=120, description="Ollama request timeout in seconds")
     ollama_keep_alive: str = Field(default="5m", description="How long to keep model in memory")
     ollama_auto_start: bool = Field(default=True, description="Auto-start bundled Ollama if not running")
