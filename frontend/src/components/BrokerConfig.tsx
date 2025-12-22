@@ -535,14 +535,33 @@ export function BrokerConfig() {
                 {ibkrConnectionMethod === 'tws' && (
                   <>
                     <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
-                      <h4 className="font-medium text-blue-400 mb-2">TWS / Gateway Setup</h4>
-                      <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
+                      <h4 className="font-medium text-blue-400 mb-2">TWS / Gateway Setup (Required)</h4>
+                      <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
                         <li>Download and install <a href="https://www.interactivebrokers.com/en/trading/tws.php" target="_blank" className="text-blue-400 hover:underline">Trader Workstation (TWS)</a> or IB Gateway</li>
                         <li>Log in with your IBKR credentials in TWS</li>
-                        <li>Go to: Edit → Global Configuration → API → Settings</li>
-                        <li>Enable "Enable ActiveX and Socket Clients"</li>
-                        <li>Disable "Read-Only API" to allow trading</li>
+                        <li>Go to: <strong className="text-blue-300">Edit → Global Configuration → API → Settings</strong></li>
+                        <li>✅ Check <strong className="text-blue-300">"Enable ActiveX and Socket Clients"</strong></li>
+                        <li>❌ Uncheck <strong className="text-blue-300">"Read-Only API"</strong> (to allow trading)</li>
+                        <li>❌ Uncheck <strong className="text-blue-300">"Allow connections from localhost only"</strong></li>
+                        <li>Under <strong className="text-blue-300">"Trusted IPs"</strong>, click + and add:
+                          <ul className="ml-4 mt-1 space-y-0.5 list-disc">
+                            <li><code className="text-xs bg-slate-700 px-1 rounded">0.0.0.0</code> (allow all - easiest for testing)</li>
+                            <li>OR <code className="text-xs bg-slate-700 px-1 rounded">172.17.0.0/16</code> (Docker subnet)</li>
+                          </ul>
+                        </li>
+                        <li>Note the <strong className="text-blue-300">Socket Port</strong>: 7497 (paper) or 7496 (live)</li>
+                        <li>Click <strong className="text-blue-300">Apply</strong> then <strong className="text-blue-300">OK</strong></li>
                       </ol>
+                    </div>
+                    
+                    <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-sm">
+                      <div className="flex items-start gap-2">
+                        <span className="text-amber-400">⚠️</span>
+                        <div>
+                          <strong className="text-amber-400">Docker Users:</strong> If running XFactor in Docker, TWS sees connections from Docker's IP (not localhost). 
+                          You must either uncheck "localhost only" or add the Docker subnet to Trusted IPs.
+                        </div>
+                      </div>
                     </div>
                     
                     <div className="grid grid-cols-2 gap-4">
