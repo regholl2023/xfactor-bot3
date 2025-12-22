@@ -857,6 +857,16 @@ async def configure_integration(request: ConfigureRequest) -> Dict[str, Any]:
     from src.config.settings import get_settings
     get_settings.cache_clear()
     
+    # #region agent log
+    import os as _os
+    _log_path = '/app/.cursor/debug.log' if _os.path.exists('/app') else '/Users/cvanthin/code/trading/000_trading/.cursor/debug.log'
+    _os.makedirs(_os.path.dirname(_log_path), exist_ok=True)
+    with open(_log_path, 'a') as _f:
+        import json as _json
+        new_settings = get_settings()
+        _f.write(_json.dumps({"location":"integrations.py:configure","message":"After cache clear","data":{"openai_key_set":bool(new_settings.openai_api_key),"openai_key_len":len(new_settings.openai_api_key) if new_settings.openai_api_key else 0,"env_file_path":str(env_file),"updated_keys":updated_keys},"timestamp":int(__import__('time').time()*1000),"sessionId":"debug-session","hypothesisId":"A,B,E"}) + '\n')
+    # #endregion
+    
     return {
         "status": "success",
         "message": f"Configuration saved for {request.type}",

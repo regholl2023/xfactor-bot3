@@ -312,7 +312,10 @@ export function AIAssistant() {
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setShowSettings(!showSettings)}
+            onClick={() => {
+              if (!showSettings) fetchProviders(); // Refetch when opening settings
+              setShowSettings(!showSettings);
+            }}
             className={`p-2 hover:bg-white/10 rounded-lg transition-colors ${showSettings ? 'bg-white/20' : ''}`}
             title="LLM Settings"
           >
