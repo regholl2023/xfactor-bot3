@@ -168,7 +168,7 @@ class OrderManager:
         return await self._execute_order(order)
     
     async def _execute_order(self, order: Order) -> Order:
-        """Execute an order after risk checks."""
+        """Execute an order after risk and compliance checks."""
         self._orders[order.order_id] = order
         
         try:
@@ -185,6 +185,41 @@ class OrderManager:
                 # Get market price
                 cached = await self.cache.get_market_price(order.symbol)
                 price = cached.get("price", 100) if cached else 100
+            
+            # Compliance check (PDT, Good Faith, Freeriding, etc.)
+            try:
+                from src.compliance import get_compliance_manager, ComplianceAction
+                compliance = get_compliance_manager()
+                
+                # Check if this is a closing trade (selling existing position)
+                is_closing = order.side.value.lower() == "sell"
+                
+                compliance_result = compliance.check_order(
+                    symbol=order.symbol,
+                    side=order.side.value.lower(),
+                    quantity=order.quantity,
+                    estimated_price=price,
+                    is_closing=is_closing,
+                )
+                
+                if not compliance_result.allowed:
+                    order.status = OrderStatus.REJECTED
+                    violations = compliance_result.violations
+                    if violations:
+                        order.error_message = f"Compliance: {violations[0].title}"
+                    else:
+                        order.error_message = "Trade blocked by compliance rules"
+                    logger.warning(f"Order rejected by compliance: {order.symbol} - {order.error_message}")
+                    return order
+                
+                if compliance_result.stop_trading:
+                    logger.warning(f"Trading stopped due to compliance violation")
+                    
+            except ImportError:
+                # Compliance module not available - continue without check
+                pass
+            except Exception as e:
+                logger.warning(f"Compliance check error (continuing): {e}")
             
             # Risk check
             decision = self.risk.check_order(
@@ -227,6 +262,20 @@ class OrderManager:
             if result.status == "Filled":
                 order.status = OrderStatus.FILLED
                 order.filled_at = datetime.utcnow()
+                
+                # Record trade for compliance tracking (PDT, wash sales, etc.)
+                try:
+                    from src.compliance import get_compliance_manager
+                    compliance = get_compliance_manager()
+                    compliance.record_trade(
+                        symbol=order.symbol,
+                        side=order.side.value.lower(),
+                        quantity=order.filled_qty or order.quantity,
+                        price=order.avg_fill_price or price,
+                    )
+                except Exception as e:
+                    logger.debug(f"Compliance trade recording: {e}")
+                    
             elif result.error_message:
                 order.status = OrderStatus.ERROR
                 order.error_message = result.error_message
