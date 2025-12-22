@@ -188,18 +188,21 @@ def get_broker_registry() -> BrokerRegistry:
 
 def _register_default_brokers(registry: BrokerRegistry) -> None:
     """Register all available broker implementations."""
+    logger.info("Registering default broker implementations...")
+    
     # Import and register broker implementations
     try:
         from src.brokers.alpaca_broker import AlpacaBroker
         registry.register_broker_class(BrokerType.ALPACA, AlpacaBroker)
-    except ImportError:
-        logger.debug("Alpaca broker not available")
+    except ImportError as e:
+        logger.debug(f"Alpaca broker not available: {e}")
     
     try:
         from src.brokers.ibkr_broker import IBKRBroker
         registry.register_broker_class(BrokerType.IBKR, IBKRBroker)
-    except ImportError:
-        logger.debug("IBKR broker not available")
+        logger.info("IBKR broker registered successfully")
+    except ImportError as e:
+        logger.warning(f"IBKR broker not available: {e}")
     
     try:
         from src.brokers.schwab_broker import SchwabBroker

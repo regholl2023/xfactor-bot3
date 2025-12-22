@@ -117,7 +117,7 @@ class MetricsCollector:
             'Trading bot information'
         )
         self.bot_info.info({
-            'version': '1.1.0',
+            'version': '1.1.1',
             'mode': 'paper',
         })
         

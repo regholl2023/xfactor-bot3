@@ -26,6 +26,11 @@ class BrokerConnectRequest(BaseModel):
     secret_key: Optional[str] = None
     account_id: Optional[str] = None
     paper: bool = True
+    # IBKR-specific fields
+    host: Optional[str] = None
+    port: Optional[int] = None
+    client_id: Optional[int] = None
+    paper_trading: Optional[bool] = None
     # Additional config can be passed
     config: Dict[str, Any] = {}
 
@@ -84,7 +89,11 @@ async def get_brokers() -> Dict[str, Any]:
 @router.post("/brokers/connect")
 async def connect_broker(request: BrokerConnectRequest) -> Dict[str, Any]:
     """Connect to a broker."""
+    from loguru import logger
+    logger.info(f"Connecting to broker: {request.broker_type}")
+    
     registry = get_broker_registry()
+    logger.debug(f"Available brokers: {[b.value for b in registry.available_brokers]}")
     
     try:
         broker_type = BrokerType(request.broker_type.lower())
@@ -95,7 +104,11 @@ async def connect_broker(request: BrokerConnectRequest) -> Dict[str, Any]:
         "api_key": request.api_key,
         "secret_key": request.secret_key,
         "account_id": request.account_id,
-        "paper": request.paper,
+        "paper": request.paper_trading if request.paper_trading is not None else request.paper,
+        # IBKR-specific
+        "host": request.host or "127.0.0.1",
+        "port": request.port or 7497,
+        "client_id": request.client_id or 1,
         **request.config
     }
     

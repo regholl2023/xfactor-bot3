@@ -104,6 +104,27 @@ const quickStart = [
 
 const changelog = [
   {
+    version: '1.1.1',
+    date: 'December 22, 2025',
+    changes: [
+      '🔌 Broker Integration Improvements',
+      'Fixed IBKR Docker networking with host.docker.internal',
+      'Resolved async event loop issues with ib_insync library',
+      'Schwab: API key auth with Client ID, Secret, Refresh Token',
+      'Tradier: API token auth with Access Token and Account ID',
+      'Improved connection error messages with actionable guidance',
+      '⚖️ Trading Compliance System',
+      'Pattern Day Trader (PDT) rule monitoring',
+      'Good Faith Violation detection for cash accounts',
+      'Freeriding protection prevents buying with unsettled funds',
+      'Day Trading Buying Power limit checks for margin',
+      'Wash Sale warnings for tax implications',
+      '📚 Glossary: Regulations Category',
+      '18+ new compliance terms: PDT, FINRA, Good Faith, Freeriding',
+      'SEC, Regulation SHO, Circuit Breaker, LULD, Margin Call'
+    ]
+  },
+  {
     version: '1.1.0',
     date: 'December 21, 2025',
     changes: [

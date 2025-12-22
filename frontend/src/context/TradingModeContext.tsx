@@ -115,13 +115,14 @@ export function TradingModeProvider({ children }: { children: ReactNode }) {
   }
 
   const connectBroker = async (provider: string, credentials: any): Promise<boolean> => {
+    console.log('Connecting broker:', provider, credentials)
     try {
       const isPaper = credentials.paper_trading === true
       
-      const res = await fetch('/api/integrations/broker/connect', {
+      const res = await fetch('/api/integrations/brokers/connect', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ provider, ...credentials }),
+        body: JSON.stringify({ broker_type: provider, ...credentials }),
       })
       
       if (res.ok) {
@@ -168,7 +169,7 @@ export function TradingModeProvider({ children }: { children: ReactNode }) {
       setMode('paper')
     }
     setBroker({ provider: null, isConnected: false })
-    fetch('/api/integrations/broker/disconnect', { method: 'POST' }).catch(() => {})
+    fetch('/api/integrations/brokers/disconnect', { method: 'POST' }).catch(() => {})
   }
 
   const refreshBrokerData = async () => {

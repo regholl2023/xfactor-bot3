@@ -63,8 +63,6 @@ export function BrokerConfig() {
     apiSecret: '',
   })
   
-  const [oauthLoading, setOauthLoading] = useState(false)
-  
   const [showAdvanced, setShowAdvanced] = useState(false)
   
   // IBKR connection method: 'tws' (TWS/Gateway) or 'web' (Client Portal with username/password)
@@ -100,8 +98,8 @@ export function BrokerConfig() {
       description: 'Full-service brokerage with Thinkorswim platform',
       features: ['Stocks', 'Options', 'Futures', 'ETFs'],
       minDeposit: '$0',
-      authType: 'oauth' as const,  // OAuth login flow
-      authDescription: 'Login with your Schwab username & password',
+      authType: 'apikey' as const,  // Uses OAuth tokens obtained from Schwab developer portal
+      authDescription: 'Requires API credentials from Schwab Developer Portal',
     },
     { 
       id: 'tradier', 
@@ -110,8 +108,8 @@ export function BrokerConfig() {
       description: 'API-first brokerage for active traders',
       features: ['Stocks', 'Options', 'ETFs'],
       minDeposit: '$0',
-      authType: 'oauth' as const,
-      authDescription: 'Login with your Tradier account',
+      authType: 'apikey' as const,  // Uses access token from Tradier
+      authDescription: 'Requires access token from Tradier dashboard',
     },
   ]
   
@@ -128,61 +126,6 @@ export function BrokerConfig() {
   const getCurrentBrokerAuthType = () => {
     const broker = brokers.find(b => b.id === selectedBroker)
     return broker?.authType || 'apikey'
-  }
-
-  // Handle OAuth login (Schwab, Tradier)
-  const handleOAuthLogin = async () => {
-    setOauthLoading(true)
-    setError('')
-    
-    try {
-      // Request OAuth URL from backend
-      const res = await fetch(`/api/integrations/broker/${selectedBroker}/oauth/start`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ paper_trading: formData.usePaper }),
-      })
-      
-      if (res.ok) {
-        const data = await res.json()
-        // Open OAuth login in new window
-        const authWindow = window.open(data.auth_url, 'broker_oauth', 'width=600,height=700')
-        
-        // Listen for OAuth callback
-        const handleMessage = async (event: MessageEvent) => {
-          if (event.data?.type === 'oauth_callback' && event.data?.broker === selectedBroker) {
-            window.removeEventListener('message', handleMessage)
-            authWindow?.close()
-            
-            // Complete the connection
-            const success = await connectBroker(selectedBroker, {
-              oauth_code: event.data.code,
-              paper_trading: formData.usePaper,
-            })
-            
-            if (success) {
-              setShowConfig(false)
-            } else {
-              setError('Failed to complete login. Please try again.')
-            }
-            setOauthLoading(false)
-          }
-        }
-        window.addEventListener('message', handleMessage)
-        
-        // Timeout after 5 minutes
-        setTimeout(() => {
-          window.removeEventListener('message', handleMessage)
-          setOauthLoading(false)
-        }, 300000)
-      } else {
-        setError('Failed to start login. Please try again.')
-        setOauthLoading(false)
-      }
-    } catch (e) {
-      setError('Connection error. Please try again.')
-      setOauthLoading(false)
-    }
   }
 
   // Handle credentials login (IBKR Web Portal)
@@ -218,23 +161,52 @@ export function BrokerConfig() {
     setConnecting(false)
   }
 
-  // Handle API key connection (Alpaca)
+  // Handle API key connection (Alpaca, Schwab, Tradier)
   const handleApiKeyConnect = async () => {
     setConnecting(true)
     setError('')
     
-    if (!formData.apiKey || !formData.apiSecret) {
-      setError('Please enter your API key and secret.')
-      setConnecting(false)
-      return
+    // Validate based on broker
+    if (selectedBroker === 'alpaca') {
+      if (!formData.apiKey || !formData.apiSecret) {
+        setError('Please enter your API key and secret.')
+        setConnecting(false)
+        return
+      }
+    } else if (selectedBroker === 'schwab') {
+      if (!formData.apiKey || !formData.apiSecret || !formData.accountId) {
+        setError('Please enter Client ID, Client Secret, and Refresh Token.')
+        setConnecting(false)
+        return
+      }
+    } else if (selectedBroker === 'tradier') {
+      if (!formData.apiKey) {
+        setError('Please enter your Access Token.')
+        setConnecting(false)
+        return
+      }
     }
     
     try {
-      const success = await connectBroker(selectedBroker, {
-        api_key: formData.apiKey,
-        api_secret: formData.apiSecret,
+      // Build connection params based on broker
+      let params: Record<string, unknown> = {
         paper_trading: formData.usePaper,
-      })
+      }
+      
+      if (selectedBroker === 'alpaca') {
+        params.api_key = formData.apiKey
+        params.api_secret = formData.apiSecret
+      } else if (selectedBroker === 'schwab') {
+        params.client_id = formData.apiKey
+        params.client_secret = formData.apiSecret
+        params.refresh_token = formData.accountId  // Using accountId field for refresh token
+      } else if (selectedBroker === 'tradier') {
+        params.access_token = formData.apiKey
+        params.account_id = formData.accountId
+        params.sandbox = formData.usePaper
+      }
+      
+      const success = await connectBroker(selectedBroker, params)
       
       if (success) {
         setShowConfig(false)
@@ -278,9 +250,6 @@ export function BrokerConfig() {
   const handleConnectClick = () => {
     const authType = getCurrentBrokerAuthType()
     switch (authType) {
-      case 'oauth':
-        handleOAuthLogin()
-        break
       case 'apikey':
         handleApiKeyConnect()
         break
@@ -443,12 +412,6 @@ export function BrokerConfig() {
                     
                     {/* Auth type indicator */}
                     <div className="flex items-center gap-1 mb-2 text-[10px] text-muted-foreground">
-                      {b.authType === 'oauth' && (
-                        <>
-                          <LogIn className="h-3 w-3" />
-                          <span>Login with username & password</span>
-                        </>
-                      )}
                       {b.authType === 'apikey' && (
                         <>
                           <Key className="h-3 w-3" />
@@ -876,68 +839,125 @@ export function BrokerConfig() {
               </div>
             )}
             
-            {/* Schwab - OAuth */}
+            {/* Schwab - API Credentials */}
             {selectedBroker === 'schwab' && (
               <div className="p-5 space-y-4">
                 <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
-                  <h4 className="font-medium text-blue-400 mb-2">Charles Schwab Login</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Click the button below to securely log in with your Schwab credentials.
-                    You'll be redirected to Schwab's official login page.
-                  </p>
+                  <h4 className="font-medium text-blue-400 mb-2">Charles Schwab Developer API</h4>
+                  <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
+                    <li>Register at <a href="https://developer.schwab.com" target="_blank" className="text-blue-400 hover:underline">developer.schwab.com</a></li>
+                    <li>Create an app and get your Client ID and Secret</li>
+                    <li>Complete OAuth to get a Refresh Token</li>
+                    <li>Enter your credentials below</li>
+                  </ol>
                 </div>
                 
-                <button
-                  onClick={handleOAuthLogin}
-                  disabled={oauthLoading}
-                  className="w-full py-3 px-4 rounded-lg bg-[#00A0DF] text-white font-medium hover:bg-[#0090CF] flex items-center justify-center gap-2"
-                >
-                  {oauthLoading ? (
-                    <>
-                      <RefreshCw className="h-5 w-5 animate-spin" />
-                      Waiting for login...
-                    </>
-                  ) : (
-                    <>
-                      <ExternalLink className="h-5 w-5" />
-                      Login with Schwab
-                    </>
-                  )}
-                </button>
+                <div className="grid grid-cols-1 gap-4">
+                  <div>
+                    <label className="text-sm text-muted-foreground">Client ID (App Key)</label>
+                    <input
+                      type="text"
+                      value={formData.apiKey}
+                      onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })}
+                      className="w-full mt-1 px-3 py-2 rounded-lg bg-secondary border border-border font-mono"
+                      placeholder="Your Schwab Client ID"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm text-muted-foreground">Client Secret</label>
+                    <div className="relative">
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        value={formData.apiSecret}
+                        onChange={(e) => setFormData({ ...formData, apiSecret: e.target.value })}
+                        className="w-full mt-1 px-3 py-2 pr-10 rounded-lg bg-secondary border border-border font-mono"
+                        placeholder="••••••••••••••••"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-sm text-muted-foreground">Refresh Token</label>
+                    <input
+                      type="text"
+                      value={formData.accountId}
+                      onChange={(e) => setFormData({ ...formData, accountId: e.target.value })}
+                      className="w-full mt-1 px-3 py-2 rounded-lg bg-secondary border border-border font-mono text-xs"
+                      placeholder="Your OAuth Refresh Token"
+                    />
+                  </div>
+                </div>
                 
-                <p className="text-xs text-muted-foreground text-center">
-                  Your password is never stored. Authentication is handled securely by Schwab.
+                <p className="text-xs text-muted-foreground">
+                  🔒 Your credentials are used to authenticate with Schwab's API. We never store your password.
                 </p>
               </div>
             )}
             
-            {/* Tradier - OAuth */}
+            {/* Tradier - API Token */}
             {selectedBroker === 'tradier' && (
               <div className="p-5 space-y-4">
                 <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
-                  <h4 className="font-medium text-blue-400 mb-2">Tradier Login</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Click the button below to securely log in with your Tradier account.
-                  </p>
+                  <h4 className="font-medium text-blue-400 mb-2">Tradier API Setup</h4>
+                  <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
+                    <li>Log in to your <a href="https://dash.tradier.com" target="_blank" className="text-blue-400 hover:underline">Tradier dashboard</a></li>
+                    <li>Go to Settings → API Access</li>
+                    <li>Generate or copy your Access Token</li>
+                    <li>Find your Account ID in Account Settings</li>
+                  </ol>
                 </div>
                 
-                <button
-                  onClick={handleOAuthLogin}
-                  disabled={oauthLoading}
-                  className="w-full py-3 px-4 rounded-lg bg-[#1DB954] text-white font-medium hover:bg-[#1AA34A] flex items-center justify-center gap-2"
-                >
-                  {oauthLoading ? (
-                    <>
-                      <RefreshCw className="h-5 w-5 animate-spin" />
-                      Waiting for login...
-                    </>
-                  ) : (
-                    <>
-                      <ExternalLink className="h-5 w-5" />
-                      Login with Tradier
-                    </>
-                  )}
-                </button>
+                <div className="grid grid-cols-1 gap-4">
+                  <div>
+                    <label className="text-sm text-muted-foreground">Access Token</label>
+                    <div className="relative">
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        value={formData.apiKey}
+                        onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })}
+                        className="w-full mt-1 px-3 py-2 pr-10 rounded-lg bg-secondary border border-border font-mono"
+                        placeholder="Your Tradier Access Token"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-sm text-muted-foreground">Account ID</label>
+                    <input
+                      type="text"
+                      value={formData.accountId}
+                      onChange={(e) => setFormData({ ...formData, accountId: e.target.value })}
+                      className="w-full mt-1 px-3 py-2 rounded-lg bg-secondary border border-border font-mono"
+                      placeholder="e.g., VA12345678"
+                    />
+                  </div>
+                </div>
+                
+                {/* Paper trading toggle */}
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="tradier-sandbox"
+                    checked={formData.usePaper}
+                    onChange={(e) => setFormData({ ...formData, usePaper: e.target.checked })}
+                    className="rounded"
+                  />
+                  <label htmlFor="tradier-sandbox" className="text-sm">
+                    Use Sandbox Environment (Paper Trading)
+                  </label>
+                </div>
               </div>
             )}
             
@@ -948,46 +968,32 @@ export function BrokerConfig() {
               </div>
             )}
             
-            {/* Footer - Only show for non-OAuth brokers (OAuth has its own button) */}
-            {getCurrentBrokerAuthType() !== 'oauth' && (
-              <div className="flex gap-3 p-5 border-t border-border">
-                <button
-                  onClick={() => setShowConfig(false)}
-                  className="flex-1 px-4 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleConnectClick}
-                  disabled={connecting || oauthLoading}
-                  className="flex-1 px-4 py-2 rounded-lg bg-xfactor-teal text-white font-medium hover:bg-xfactor-teal/90 text-sm disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  {connecting ? (
-                    <>
-                      <RefreshCw className="h-4 w-4 animate-spin" />
-                      Connecting...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle className="h-4 w-4" />
-                      Connect
-                    </>
-                  )}
-                </button>
-              </div>
-            )}
-            
-            {/* Cancel button for OAuth brokers */}
-            {getCurrentBrokerAuthType() === 'oauth' && (
-              <div className="flex gap-3 p-5 border-t border-border">
-                <button
-                  onClick={() => setShowConfig(false)}
-                  className="w-full px-4 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm"
-                >
-                  Cancel
-                </button>
-              </div>
-            )}
+            {/* Footer */}
+            <div className="flex gap-3 p-5 border-t border-border">
+              <button
+                onClick={() => setShowConfig(false)}
+                className="flex-1 px-4 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConnectClick}
+                disabled={connecting}
+                className="flex-1 px-4 py-2 rounded-lg bg-xfactor-teal text-white font-medium hover:bg-xfactor-teal/90 text-sm disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {connecting ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    Connecting...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="h-4 w-4" />
+                    Connect
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

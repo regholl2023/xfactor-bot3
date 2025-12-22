@@ -5,6 +5,36 @@ All notable changes to the XFactor Bot project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2025-12-22
+
+### 🔌 Broker Integration Improvements
+
+#### IBKR Connection Fixes
+- **Docker Networking**: Fixed `host.docker.internal` resolution for Docker containers
+- **Event Loop Fix**: Resolved async event loop issues with `ib_insync` library
+- **Port Reachability Test**: Added socket pre-check before connection attempt
+- **Error Messages**: Improved connection error messages with actionable guidance
+
+#### Broker Configuration UI
+- **Schwab**: Updated to API key authentication with Client ID, Secret, and Refresh Token
+- **Tradier**: Updated to API token authentication with Access Token and Account ID
+- **Disconnect/Reconnect**: Existing disconnect functionality now properly documented
+- **Unified Footer**: All broker configs now show Connect/Cancel buttons
+
+#### Trading Compliance
+- **PDT Rule Monitoring**: Pattern Day Trader rule checks and warnings
+- **Good Faith Violation**: Cash account violation detection
+- **Freeriding Protection**: Prevents buying with unsettled funds
+- **Day Trading Buying Power**: Margin account limit checks
+- **Wash Sale Warnings**: Alerts for potential wash sales
+- **Glossary**: Added "Regulations" category with 18+ compliance terms
+
+### 🔧 Technical Fixes
+- **Version Sync**: All components now at version 1.1.1
+- **Docker Compose**: Added `extra_hosts` for `host.docker.internal` mapping
+
+---
+
 ## [1.1.0] - 2025-12-21
 
 ### ⚙️ Settings Page & UI Restructuring
