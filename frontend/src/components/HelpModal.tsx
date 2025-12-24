@@ -104,6 +104,18 @@ const quickStart = [
 
 const changelog = [
   {
+    version: '1.1.5',
+    date: 'December 24, 2025',
+    changes: [
+      '🔧 IBKR Paper Trading Fixes',
+      'Improved IBKR account data fetching from TWS',
+      'Fallback to accountValues when accountSummary unavailable',
+      'Fixed parsing of NetLiquidation, CashBalance, BuyingPower',
+      'Added /api/positions/debug endpoint for diagnostics',
+      'Enhanced logging for portfolio summary fetching'
+    ]
+  },
+  {
     version: '1.1.4',
     date: 'December 22, 2025',
     changes: [

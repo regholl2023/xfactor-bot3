@@ -5,6 +5,16 @@ All notable changes to the XFactor Bot project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.5] - 2025-12-24
+
+### 🔧 IBKR Paper Trading Fixes
+
+#### Account Data Fetching
+- **Improved IBKR Account Data**: Fixed account data fetching from IBKR TWS with fallback to accountValues when accountSummary is unavailable
+- **Better Value Parsing**: Fixed parsing of IBKR account values (NetLiquidation, CashBalance, BuyingPower)
+- **Debug Endpoint**: Added `/api/positions/debug` to diagnose broker connection issues
+- **Enhanced Logging**: Detailed account breakdowns in portfolio summary fetching
+
 ## [1.1.4] - 2025-12-24
 
 ### 📰 Real-Time Market Data APIs

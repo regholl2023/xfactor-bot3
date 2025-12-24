@@ -84,18 +84,33 @@ async def get_portfolio_summary() -> Dict[str, Any]:
     unrealized_pnl = 0.0
     position_count = 0
     buying_power = 0.0
+    broker_details = []
+    
+    logger.debug(f"Portfolio summary: connected brokers = {registry.connected_brokers}")
     
     # Aggregate data from all connected brokers
     for broker_type in registry.connected_brokers:
         broker = registry.get_broker(broker_type)
         if broker and broker.is_connected:
             try:
+                logger.debug(f"Fetching accounts from {broker_type.value}...")
                 accounts = await broker.get_accounts()
+                logger.debug(f"Got {len(accounts)} accounts from {broker_type.value}")
+                
                 for account in accounts:
+                    logger.debug(f"Account {account.account_id}: equity={account.equity}, cash={account.cash}, portfolio_value={account.portfolio_value}")
                     total_value += account.equity
                     total_cash += account.cash
                     positions_value += account.portfolio_value
                     buying_power += account.buying_power
+                    
+                    broker_details.append({
+                        "broker": broker_type.value,
+                        "account_id": account.account_id,
+                        "equity": account.equity,
+                        "cash": account.cash,
+                        "buying_power": account.buying_power,
+                    })
                 
                 # Get positions for unrealized P&L
                 if accounts:
@@ -107,6 +122,8 @@ async def get_portfolio_summary() -> Dict[str, Any]:
                         
             except Exception as e:
                 logger.error(f"Error fetching summary from {broker_type.value}: {e}")
+                import traceback
+                logger.error(traceback.format_exc())
     
     return {
         "total_value": round(total_value, 2),
@@ -118,7 +135,61 @@ async def get_portfolio_summary() -> Dict[str, Any]:
         "daily_pnl": round(unrealized_pnl, 2),  # Approximation
         "position_count": position_count,
         "connected_brokers": [b.value for b in registry.connected_brokers],
+        "broker_details": broker_details,
     }
+
+
+@router.get("/debug")
+async def debug_broker_connection() -> Dict[str, Any]:
+    """Debug endpoint to check broker connection and account data."""
+    registry = get_broker_registry()
+    
+    debug_info = {
+        "connected_brokers": [b.value for b in registry.connected_brokers],
+        "available_brokers": [b.value for b in registry.available_brokers],
+        "default_broker": registry._default_broker.value if registry._default_broker else None,
+        "broker_details": [],
+    }
+    
+    for broker_type in registry.connected_brokers:
+        broker = registry.get_broker(broker_type)
+        if broker:
+            broker_info = {
+                "type": broker_type.value,
+                "is_connected": broker.is_connected,
+                "class": type(broker).__name__,
+            }
+            
+            # Get IBKR-specific info
+            if hasattr(broker, 'host'):
+                broker_info["host"] = broker.host
+            if hasattr(broker, 'port'):
+                broker_info["port"] = broker.port
+            if hasattr(broker, 'account_id'):
+                broker_info["account_id"] = broker.account_id
+            if hasattr(broker, '_ib') and broker._ib:
+                broker_info["ib_connected"] = broker._ib.isConnected()
+                broker_info["managed_accounts"] = broker._ib.managedAccounts() if broker._ib.isConnected() else []
+            
+            # Try to fetch accounts
+            try:
+                accounts = await broker.get_accounts()
+                broker_info["accounts"] = [
+                    {
+                        "id": a.account_id,
+                        "equity": a.equity,
+                        "cash": a.cash,
+                        "buying_power": a.buying_power,
+                        "portfolio_value": a.portfolio_value,
+                    }
+                    for a in accounts
+                ]
+            except Exception as e:
+                broker_info["accounts_error"] = str(e)
+            
+            debug_info["broker_details"].append(broker_info)
+    
+    return debug_info
 
 
 @router.get("/equity-history")

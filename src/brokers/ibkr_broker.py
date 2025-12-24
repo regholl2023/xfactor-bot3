@@ -194,39 +194,78 @@ class IBKRBroker(BaseBroker):
     async def get_accounts(self) -> List[AccountInfo]:
         """Get IBKR accounts."""
         if not self._ib or not self._ib.isConnected():
+            logger.warning("IBKR get_accounts called but not connected")
             return []
         
         try:
             loop = asyncio.get_event_loop()
             
-            # Get account summary
-            summary = await loop.run_in_executor(
-                None,
-                lambda: self._ib.accountSummary(self.account_id)
-            )
+            logger.debug(f"Fetching account summary for {self.account_id}")
             
-            # Parse summary into dict
+            # Get account summary - use accountValues for more reliable data
+            def fetch_account_data():
+                # First try accountSummary
+                summary = self._ib.accountSummary(self.account_id)
+                if summary:
+                    return summary, 'summary'
+                
+                # Fall back to accountValues
+                values = self._ib.accountValues(self.account_id)
+                return values, 'values'
+            
+            data, data_type = await loop.run_in_executor(None, fetch_account_data)
+            
+            # Parse data into dict
             summary_dict = {}
-            for item in summary:
-                summary_dict[item.tag] = item.value
+            for item in data:
+                # Handle both AccountValue and AccountSummary objects
+                tag = getattr(item, 'tag', None)
+                value = getattr(item, 'value', None)
+                if tag and value:
+                    summary_dict[tag] = value
+            
+            logger.debug(f"IBKR account data ({data_type}): {len(summary_dict)} fields")
+            
+            # Log key values for debugging
+            net_liq = summary_dict.get("NetLiquidation", summary_dict.get("NetLiquidationByCurrency", "0"))
+            cash = summary_dict.get("TotalCashValue", summary_dict.get("CashBalance", "0"))
+            buying_power = summary_dict.get("BuyingPower", summary_dict.get("AvailableFunds", "0"))
+            
+            logger.info(f"IBKR Account {self.account_id}: NetLiq={net_liq}, Cash={cash}, BuyingPower={buying_power}")
+            
+            # Parse values safely
+            def parse_float(val, default=0.0):
+                if val is None:
+                    return default
+                try:
+                    return float(str(val).replace(',', ''))
+                except (ValueError, TypeError):
+                    return default
+            
+            equity = parse_float(summary_dict.get("NetLiquidation") or summary_dict.get("NetLiquidationByCurrency"))
+            cash_val = parse_float(summary_dict.get("TotalCashValue") or summary_dict.get("CashBalance"))
+            bp = parse_float(summary_dict.get("BuyingPower") or summary_dict.get("AvailableFunds"))
+            portfolio = parse_float(summary_dict.get("GrossPositionValue") or summary_dict.get("StockMarketValue"))
             
             return [AccountInfo(
                 account_id=self.account_id,
                 broker=BrokerType.IBKR,
-                account_type=summary_dict.get("AccountType", "Unknown"),
-                buying_power=float(summary_dict.get("BuyingPower", 0)),
-                cash=float(summary_dict.get("TotalCashValue", 0)),
-                portfolio_value=float(summary_dict.get("GrossPositionValue", 0)),
-                equity=float(summary_dict.get("NetLiquidation", 0)),
-                margin_used=float(summary_dict.get("MaintMarginReq", 0)),
-                margin_available=float(summary_dict.get("AvailableFunds", 0)),
-                day_trades_remaining=int(summary_dict.get("DayTradesRemaining", 3)),
+                account_type=summary_dict.get("AccountType", "Paper" if "D" in self.account_id else "Live"),
+                buying_power=bp,
+                cash=cash_val,
+                portfolio_value=portfolio,
+                equity=equity,
+                margin_used=parse_float(summary_dict.get("MaintMarginReq")),
+                margin_available=parse_float(summary_dict.get("AvailableFunds")),
+                day_trades_remaining=int(parse_float(summary_dict.get("DayTradesRemaining", 3))),
                 is_pattern_day_trader=summary_dict.get("DayTradesRemaining", "3") == "0",
                 currency="USD",
                 last_updated=datetime.now()
             )]
         except Exception as e:
             logger.error(f"Error getting IBKR account: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
             return []
     
     async def get_account_info(self, account_id: str) -> AccountInfo:
