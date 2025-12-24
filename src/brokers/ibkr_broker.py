@@ -61,8 +61,9 @@ class IBKRBroker(BaseBroker):
         port: int = 7497,
         client_id: int = 1,
         account_id: str = "",
-        timeout: int = 30,
+        timeout: int = 60,  # Increased from 30 to 60 seconds
         readonly: bool = False,
+        max_retries: int = 3,
         **kwargs
     ):
         super().__init__(BrokerType.IBKR)
@@ -72,6 +73,7 @@ class IBKRBroker(BaseBroker):
         self.client_id = client_id
         self.account_id = account_id
         self.timeout = timeout
+        self.max_retries = max_retries
         self.readonly = readonly
         self._ib = None
         self._error_message = None
@@ -80,42 +82,64 @@ class IBKRBroker(BaseBroker):
         """
         Synchronous connect method to be run in executor.
         ib_insync requires its own event loop management.
+        Includes retry logic for robustness.
         """
-        try:
-            from ib_insync import IB, util
-            
-            # Enable nested event loops for ib_insync
-            util.startLoop()
-            
-            self._ib = IB()
-            
-            logger.info(f"Attempting IBKR connection to {self.host}:{self.port}")
-            
-            # ib_insync connect is synchronous when called directly
-            self._ib.connect(
-                self.host,
-                self.port,
-                clientId=self.client_id,
-                timeout=self.timeout,
-                readonly=self.readonly
-            )
-            
-            if self._ib.isConnected():
-                # Get account ID if not provided
-                if not self.account_id:
-                    accounts = self._ib.managedAccounts()
-                    if accounts:
-                        self.account_id = accounts[0]
+        import time
+        
+        last_error = None
+        
+        for attempt in range(1, self.max_retries + 1):
+            try:
+                from ib_insync import IB, util
                 
-                logger.info(f"Connected to IBKR - Account: {self.account_id}")
-                return True
-            else:
-                logger.error("IBKR connect returned but isConnected() is False")
-                return False
+                # Enable nested event loops for ib_insync
+                util.startLoop()
                 
-        except Exception as e:
-            logger.error(f"IBKR sync connect error: {e}")
-            raise
+                # Clean up any existing connection
+                if self._ib:
+                    try:
+                        self._ib.disconnect()
+                    except:
+                        pass
+                
+                self._ib = IB()
+                
+                logger.info(f"Attempting IBKR connection to {self.host}:{self.port} (attempt {attempt}/{self.max_retries})")
+                
+                # ib_insync connect is synchronous when called directly
+                self._ib.connect(
+                    self.host,
+                    self.port,
+                    clientId=self.client_id,
+                    timeout=self.timeout,
+                    readonly=self.readonly
+                )
+                
+                if self._ib.isConnected():
+                    # Get account ID if not provided
+                    if not self.account_id:
+                        accounts = self._ib.managedAccounts()
+                        if accounts:
+                            self.account_id = accounts[0]
+                    
+                    logger.info(f"Connected to IBKR - Account: {self.account_id}")
+                    return True
+                else:
+                    logger.warning(f"IBKR connect attempt {attempt} returned but isConnected() is False")
+                    last_error = "Connection returned but not connected"
+                    
+            except Exception as e:
+                last_error = str(e)
+                logger.warning(f"IBKR connection attempt {attempt} failed: {e}")
+            
+            # Wait before retry (exponential backoff)
+            if attempt < self.max_retries:
+                wait_time = min(2 ** attempt, 10)  # 2s, 4s, 8s max 10s
+                logger.info(f"Retrying in {wait_time} seconds...")
+                time.sleep(wait_time)
+        
+        logger.error(f"All {self.max_retries} IBKR connection attempts failed. Last error: {last_error}")
+        raise Exception(f"Failed to connect after {self.max_retries} attempts: {last_error}")
     
     async def connect(self) -> bool:
         """
@@ -128,28 +152,42 @@ class IBKRBroker(BaseBroker):
             
             logger.info(f"Connecting to IBKR at {self.host}:{self.port} (client_id={self.client_id})")
             
-            # First, test if the port is reachable
-            try:
-                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                sock.settimeout(5)
-                result = sock.connect_ex((self.host, self.port))
-                sock.close()
-                
-                if result != 0:
-                    self._error_message = f"Cannot reach {self.host}:{self.port}. Make sure TWS/Gateway is running and API is enabled on this port."
-                    logger.error(self._error_message)
-                    return False
+            # First, test if the port is reachable (with retry)
+            port_reachable = False
+            for socket_attempt in range(3):
+                try:
+                    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    sock.settimeout(10)  # Increased from 5 to 10 seconds
+                    result = sock.connect_ex((self.host, self.port))
+                    sock.close()
                     
-                logger.info(f"Port {self.port} is reachable on {self.host}")
-            except Exception as e:
-                logger.warning(f"Socket test failed: {e}")
+                    if result == 0:
+                        port_reachable = True
+                        logger.info(f"Port {self.port} is reachable on {self.host}")
+                        break
+                    else:
+                        logger.warning(f"Socket test attempt {socket_attempt + 1}: port not reachable (code {result})")
+                except Exception as e:
+                    logger.warning(f"Socket test attempt {socket_attempt + 1} failed: {e}")
+                
+                if socket_attempt < 2:
+                    import time
+                    time.sleep(2)
             
-            # Run the synchronous connect in a thread pool
+            if not port_reachable:
+                self._error_message = f"Cannot reach {self.host}:{self.port}. Make sure TWS/Gateway is running and API is enabled on this port."
+                logger.error(self._error_message)
+                return False
+            
+            # Run the synchronous connect in a thread pool with timeout
             loop = asyncio.get_running_loop()
             try:
-                connected = await loop.run_in_executor(
-                    _ib_executor,
-                    self._connect_sync
+                # Total timeout: timeout * max_retries + buffer for retries
+                total_timeout = self.timeout * self.max_retries + 30
+                
+                connected = await asyncio.wait_for(
+                    loop.run_in_executor(_ib_executor, self._connect_sync),
+                    timeout=total_timeout
                 )
                 
                 if connected:
@@ -159,6 +197,10 @@ class IBKRBroker(BaseBroker):
                     self._error_message = "Failed to connect to TWS/Gateway. Check that it's running and API is enabled."
                     return False
                     
+            except asyncio.TimeoutError:
+                self._error_message = f"Connection timed out after {total_timeout}s. TWS/Gateway may be slow to respond."
+                logger.error(self._error_message)
+                return False
             except Exception as e:
                 self._error_message = f"Connection failed: {str(e)}"
                 logger.error(f"IBKR connect executor error: {e}")
