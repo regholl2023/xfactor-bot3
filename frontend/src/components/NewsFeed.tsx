@@ -10,6 +10,7 @@ import {
   type FieldDefinition, type FilterConfig 
 } from './DataFilters'
 import { openExternalUrl } from '../utils/openUrl'
+import { useTradingMode } from '../context/TradingModeContext'
 
 interface NewsItem {
   id: string
@@ -301,12 +302,14 @@ const quickFilterOptions = [
 ]
 
 export function NewsFeed({ maxItems = 100, itemsPerPage = 10 }: NewsFeedProps) {
+  const { mode } = useTradingMode()
   const [allNews, setAllNews] = useState<NewsItem[]>([])
   const [currentPage, setCurrentPage] = useState(1)
   const [loading, setLoading] = useState(false)
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date())
   const [selectedNews, setSelectedNews] = useState<NewsItem | null>(null)
   const [showSentimentHelp, setShowSentimentHelp] = useState(false)
+  const [isUsingMockData, setIsUsingMockData] = useState(false)
   
   // Auto-update feature
   const [autoUpdate, setAutoUpdate] = useState(false)
@@ -333,7 +336,7 @@ export function NewsFeed({ maxItems = 100, itemsPerPage = 10 }: NewsFeedProps) {
 
   useEffect(() => {
     loadNews()
-  }, [])
+  }, [mode])
   
   // Auto-update effect
   useEffect(() => {
@@ -355,14 +358,64 @@ export function NewsFeed({ maxItems = 100, itemsPerPage = 10 }: NewsFeedProps) {
     setCurrentPage(1)
   }, [searchQuery, filters, sort])
 
-  const loadNews = () => {
+  const loadNews = async () => {
     setLoading(true)
-    setTimeout(() => {
+    
+    // In demo mode, use mock data
+    if (mode === 'demo') {
+      setTimeout(() => {
+        setAllNews(generateMockNews(maxItems))
+        setLastUpdate(new Date())
+        setLoading(false)
+        setCurrentPage(1)
+        setIsUsingMockData(true)
+      }, 500)
+      return
+    }
+    
+    // In paper/live mode, fetch real news from API
+    try {
+      const res = await fetch('/api/news/')
+      if (res.ok) {
+        const data = await res.json()
+        if (data.articles && data.articles.length > 0) {
+          // Transform API response to NewsItem format
+          const newsItems: NewsItem[] = data.articles.map((article: any, idx: number) => ({
+            id: article.article_id || `news-${idx}`,
+            time: new Date(article.timestamp).toLocaleTimeString(),
+            timestamp: new Date(article.timestamp),
+            ticker: article.tickers?.[0] || 'MARKET',
+            sentiment: article.sentiment || 0,
+            headline: article.headline,
+            source: article.source,
+            url: article.url || '#',
+            category: article.category || 'General',
+            region: article.region || 'US',
+            summary: article.summary,
+            relatedTickers: article.tickers,
+          }))
+          setAllNews(newsItems)
+          setIsUsingMockData(false)
+        } else {
+          // No real news available, fall back to mock with indicator
+          setAllNews(generateMockNews(maxItems))
+          setIsUsingMockData(true)
+        }
+      } else {
+        // API error, fall back to mock
+        setAllNews(generateMockNews(maxItems))
+        setIsUsingMockData(true)
+      }
+    } catch (e) {
+      console.error('Failed to fetch news:', e)
+      // Network error, fall back to mock
       setAllNews(generateMockNews(maxItems))
-      setLastUpdate(new Date())
-      setLoading(false)
-      setCurrentPage(1)
-    }, 500)
+      setIsUsingMockData(true)
+    }
+    
+    setLastUpdate(new Date())
+    setLoading(false)
+    setCurrentPage(1)
   }
 
   // Pagination
@@ -473,6 +526,14 @@ export function NewsFeed({ maxItems = 100, itemsPerPage = 10 }: NewsFeedProps) {
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <Globe className="h-3 w-3" />
           <span>Global Sources ({filteredCount} articles)</span>
+          {isUsingMockData && (
+            <>
+              <span className="text-muted-foreground/50">•</span>
+              <span className="px-1.5 py-0.5 bg-amber-500/20 text-amber-400 rounded text-[10px] font-medium">
+                {mode === 'demo' ? 'DEMO DATA' : 'SIMULATED'}
+              </span>
+            </>
+          )}
           <span className="text-muted-foreground/50">•</span>
           <button
             onClick={() => setShowSentimentHelp(!showSentimentHelp)}

@@ -2,9 +2,10 @@ import { useState, useEffect, useMemo } from 'react'
 import { 
   Users, TrendingUp, TrendingDown, ExternalLink, RefreshCw,
   Star, Building2, User, ChevronLeft, ChevronRight,
-  BarChart3, Calendar, Megaphone, Brain, Search, SortAsc, SortDesc, X
+  BarChart3, Calendar, Megaphone, Brain, Search, SortAsc, SortDesc, X, AlertCircle
 } from 'lucide-react'
 import { useDataFilters, FilterBar, type FieldDefinition, type SortConfig } from './DataFilters'
+import { useTradingMode } from '../context/TradingModeContext'
 
 // ============================================================================
 // Types
@@ -332,11 +333,13 @@ const generateAInvestSignals = (count: number): AInvestSignal[] => {
 // ============================================================================
 
 export function TraderInsights() {
+  const { mode } = useTradingMode()
   const [activeTab, setActiveTab] = useState<TabType>('insiders')
   const [currentPage, setCurrentPage] = useState(1)
   const [loading, setLoading] = useState(false)
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date())
   const [itemsPerPage, setItemsPerPage] = useState(10)
+  const [isUsingMockData, setIsUsingMockData] = useState(false)
   
   // Data states
   const [insiderTrades, setInsiderTrades] = useState<InsiderTrade[]>([])
@@ -361,25 +364,86 @@ export function TraderInsights() {
 
   useEffect(() => {
     loadAllData()
-  }, [])
+  }, [mode])
 
   useEffect(() => {
     setCurrentPage(1)
   }, [activeTab])
 
-  const loadAllData = () => {
+  const loadAllData = async () => {
     setLoading(true)
-    setTimeout(() => {
+    
+    // In demo mode, always use mock data
+    if (mode === 'demo') {
+      setTimeout(() => {
+        setInsiderTrades(generateInsiderTrades(maxItems))
+        setTopTraders(generateTopTraders(maxItems))
+        setFinvizSignals(generateFinvizSignals(maxItems))
+        setMaSignals(generateMovingAverageSignals(maxItems))
+        setEarnings(generateEarningsReports(maxItems))
+        setPressReleases(generatePressReleases(maxItems))
+        setAinvestSignals(generateAInvestSignals(maxItems))
+        setLastUpdate(new Date())
+        setLoading(false)
+        setIsUsingMockData(true)
+      }, 500)
+      return
+    }
+    
+    // In paper/live mode, try to fetch real data from APIs
+    let usedMock = false
+    
+    try {
+      // Try to fetch insider trades from API
+      const insiderRes = await fetch('/api/market/insider-trades')
+      if (insiderRes.ok) {
+        const data = await insiderRes.json()
+        if (data.trades && data.trades.length > 0) {
+          setInsiderTrades(data.trades)
+        } else {
+          setInsiderTrades(generateInsiderTrades(maxItems))
+          usedMock = true
+        }
+      } else {
+        setInsiderTrades(generateInsiderTrades(maxItems))
+        usedMock = true
+      }
+    } catch {
       setInsiderTrades(generateInsiderTrades(maxItems))
-      setTopTraders(generateTopTraders(maxItems))
-      setFinvizSignals(generateFinvizSignals(maxItems))
-      setMaSignals(generateMovingAverageSignals(maxItems))
+      usedMock = true
+    }
+    
+    try {
+      // Try to fetch earnings calendar
+      const earningsRes = await fetch('/api/market/earnings-calendar')
+      if (earningsRes.ok) {
+        const data = await earningsRes.json()
+        if (data.earnings && data.earnings.length > 0) {
+          setEarnings(data.earnings)
+        } else {
+          setEarnings(generateEarningsReports(maxItems))
+          usedMock = true
+        }
+      } else {
+        setEarnings(generateEarningsReports(maxItems))
+        usedMock = true
+      }
+    } catch {
       setEarnings(generateEarningsReports(maxItems))
-      setPressReleases(generatePressReleases(maxItems))
-      setAinvestSignals(generateAInvestSignals(maxItems))
-      setLastUpdate(new Date())
-      setLoading(false)
-    }, 500)
+      usedMock = true
+    }
+    
+    // These don't have real APIs yet, always use mock
+    setTopTraders(generateTopTraders(maxItems))
+    setFinvizSignals(generateFinvizSignals(maxItems))
+    setMaSignals(generateMovingAverageSignals(maxItems))
+    setPressReleases(generatePressReleases(maxItems))
+    setAinvestSignals(generateAInvestSignals(maxItems))
+    usedMock = true
+    
+    setIsUsingMockData(usedMock)
+    setLastUpdate(new Date())
+    setLoading(false)
   }
 
   const getCurrentFilter = () => {
@@ -503,7 +567,7 @@ export function TraderInsights() {
     <div className="space-y-4">
       {/* Tabs */}
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <div className="flex flex-wrap gap-1">
+        <div className="flex flex-wrap gap-1 items-center">
           {tabs.map(tab => (
             <button
               key={tab.id}
@@ -519,6 +583,12 @@ export function TraderInsights() {
               <span className="text-[10px] opacity-70">({tab.count})</span>
             </button>
           ))}
+          {isUsingMockData && (
+            <span className="ml-2 px-1.5 py-0.5 bg-amber-500/20 text-amber-400 rounded text-[10px] font-medium flex items-center gap-1">
+              <AlertCircle className="h-3 w-3" />
+              {mode === 'demo' ? 'DEMO DATA' : 'SIMULATED'}
+            </span>
+          )}
         </div>
         <button
           onClick={loadAllData}
