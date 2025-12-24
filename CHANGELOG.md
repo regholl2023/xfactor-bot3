@@ -46,6 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Version Sync**: All components now at version 1.1.1
 - **Docker Compose**: Added `extra_hosts` for `host.docker.internal` mapping
 - **Settings Cache Clear**: Backend reloads settings after saving AI provider config
+- **Legacy Mac Backend**: Now builds fresh with IBKR support (was using outdated pre-built binary)
 
 ---
 

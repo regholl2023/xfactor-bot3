@@ -140,21 +140,16 @@ jobs:
           echo "Machine: $(uname -m)"
           echo "Python arch: $(python -c 'import platform; print(platform.machine())')"
 
-      - name: Download pre-built backend (Big Sur compatible)
+      - name: Build Python backend
+        env:
+          MACOSX_DEPLOYMENT_TARGET: '10.15'
         run: |
-          # Download pre-built backend from GitHub release (built on Big Sur for compatibility)
-          mkdir -p desktop/src-tauri/binaries
-          cd desktop/src-tauri/binaries
-          
-          # Download the pre-built binary from the legacy-backend release
-          curl -L -o xfactor-backend-x86_64-apple-darwin \
-            "https://github.com/Channarith/xfactor-bot/releases/download/v0.9.7-legacy-backend/xfactor-backend-x86_64-apple-darwin"
-          
-          chmod +x xfactor-backend-x86_64-apple-darwin
-          
-          echo "=== Downloaded pre-built backend ==="
-          ls -la
-          file xfactor-backend-x86_64-apple-darwin
+          cd desktop/scripts
+          python build_backend.py
+          # Verify binary was created
+          echo "=== Binaries created ==="
+          ls -la ../src-tauri/binaries/
+          file ../src-tauri/binaries/xfactor-backend-*
 
       - name: Install frontend dependencies
         run: |
