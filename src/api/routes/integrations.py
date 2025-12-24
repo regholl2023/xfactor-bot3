@@ -123,18 +123,22 @@ async def connect_broker(request: BrokerConnectRequest) -> Dict[str, Any]:
             "account_type": "paper" if config.get("paper") else "live",
         }
         
-        # Try to get real account data
+        # Try to get real account data (with timeout to prevent blocking)
         try:
             broker = registry.get_broker(broker_type)
             if broker and broker.is_connected:
-                accounts = await broker.get_accounts()
-                if accounts:
-                    account = accounts[0]
-                    response_data["account_id"] = account.account_id
-                    response_data["portfolio_value"] = account.equity
-                    response_data["buying_power"] = account.buying_power
-                    response_data["cash"] = account.cash
-                    logger.info(f"Account data: equity={account.equity}, buying_power={account.buying_power}")
+                import asyncio
+                try:
+                    accounts = await asyncio.wait_for(broker.get_accounts(), timeout=10.0)
+                    if accounts:
+                        account = accounts[0]
+                        response_data["account_id"] = account.account_id
+                        response_data["portfolio_value"] = account.equity
+                        response_data["buying_power"] = account.buying_power
+                        response_data["cash"] = account.cash
+                        logger.info(f"Account data: equity={account.equity}, buying_power={account.buying_power}")
+                except asyncio.TimeoutError:
+                    logger.warning("Timed out fetching account data, but connection succeeded")
         except Exception as e:
             logger.warning(f"Could not fetch account data after connect: {e}")
         
